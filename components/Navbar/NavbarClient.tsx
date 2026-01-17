@@ -91,7 +91,7 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
           
           {/* BECOME SELLER (Hidden on Mobile) */}
           <Link
-            href="/seller/onboarding"
+            href="https://seller.shopybucks.com/"
             className="hidden sm:block text-[12px] font-black uppercase text-[#ff3f6c] hover:opacity-80 transition-opacity"
           >
             Become a Supplier
@@ -174,4 +174,5 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
       )}
     </div>
   );
+
 }
