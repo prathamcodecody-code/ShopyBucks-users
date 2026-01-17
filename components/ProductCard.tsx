@@ -18,9 +18,9 @@ type Product = {
   img1?: string | null;
   stock?: number;
   category: {
-    id: number;
-    name: string;
-    slug: string;
+    id?: number;
+    name?: string;
+    slug?: string;
   };
 };
 
@@ -137,4 +137,5 @@ export default function ProductCard({ product }: { product?: Product }) {
       </div>
     </div>
   );
+
 }
