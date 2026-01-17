@@ -7,6 +7,8 @@ interface AuthContextType {
   token: string | null;
   loginWithToken: (token: string) => void;
   logout: () => void;
+  setUser: (user: any) => void;
+
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -52,10 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loginWithToken, logout }}>
+    <AuthContext.Provider value={{ user, token, loginWithToken, logout , setUser }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export const useAuth = () => useContext(AuthContext)!;
+
