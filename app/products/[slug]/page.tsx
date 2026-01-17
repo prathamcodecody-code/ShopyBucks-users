@@ -1,13 +1,28 @@
 import { redirect } from "next/navigation";
 
-export default async function OldProductPage({ params }) {
+interface PageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function OldProductPage({ params }: PageProps) {
+  // Await the params object
+  const { slug } = await params;
+
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/products/${params.slug}`
+    `${process.env.NEXT_PUBLIC_API_URL}/products/${slug}`
   );
 
-  if (!res.ok) return null;
+  // If product doesn't exist, don't crash, just redirect to home or 404
+  if (!res.ok) {
+     redirect("/");
+     return null;
+  }
 
   const product = await res.json();
 
-  redirect(`/${product.category.slug}/${product.slug}-${product.id}`);
+  // Safety check for category slug to prevent build errors
+  const categorySlug = product.category?.slug || "all-products";
+  const productSlug = product.slug || "product";
+
+  redirect(`/${categorySlug}/${productSlug}-${product.id}`);
 }
