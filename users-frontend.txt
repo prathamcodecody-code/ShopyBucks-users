@@ -1,0 +1,137 @@
+user-frontend/
+│
+└── app/
+    ├── layout.tsx
+    │   # Root layout
+    │   # Navbar + Footer
+    │
+    ├── globals.css
+    │
+    ├── page.tsx
+    │   # Home page
+    │   # Hero, categories, trending, new arrivals
+    │
+    ├── category/
+    │   └── [categoryId]/page.tsx
+    │       # Category-wise product listing
+    │
+    ├── products/
+    │   ├── page.tsx
+    │   │   # All products
+    │   │   # Filters, sorting, pagination
+    │   │
+    │   └── [slug]/page.tsx
+    │       # Product detail
+    │       # Sizes, stock status, add to cart, reviews
+    │
+    ├── search/
+    │   └── page.tsx
+    │       # Search results
+    │
+    ├── cart/
+    │   └── page.tsx
+    │       # Cart
+    │       # Stock validation before checkout
+    │
+    ├── checkout/
+    │   ├── address/page.tsx         # Address step
+    │   ├── payment/page.tsx         # COD / Razorpay
+    │   ├── review/page.tsx          # Final confirmation
+    │   └── success/page.tsx         # Payment success page
+    │
+    ├── orders/
+    │   ├── page.tsx
+    │   │   # My Orders list
+    │   │
+    │   └── [id]/page.tsx
+    │       # Order details
+    │       # Status timeline + cancel eligibility
+    │
+    ├── profile/
+    │   └── page.tsx
+    │       # Profile
+    │       # Orders, reviews, feedback access
+    │
+    ├── feedback/
+    │   └── page.tsx                 # Submit feedback
+    │
+    ├── reviews/
+    │   └── page.tsx                 # User reviews history
+    │
+    ├── auth/
+    │   └── login/page.tsx
+    │       # OTP login
+    │
+    ├── pages/                       # Static / SEO pages
+    │   ├── about/page.tsx
+    │   ├── contact/page.tsx
+    │   ├── faq/page.tsx
+    │   ├── terms/page.tsx
+    │   ├── privacy/page.tsx
+    │   ├── shipping/page.tsx
+    │   └── refund/page.tsx
+    │
+    └── not-found.tsx
+
+components/
+│
+├── navbar/
+│   ├── NavbarClient.tsx
+│   ├── MegaMenu.tsx
+│   └── NavItem.tsx
+│
+├── product/
+│   ├── ProductCard.tsx
+│   ├── ProductImages.tsx
+│   ├── SizeSelector.tsx
+│   ├── StockBadge.tsx           # In / Low / Out of stock
+│   └── ReviewStars.tsx
+│
+├── cart/
+│   ├── CartItem.tsx
+│   ├── AddToCartButton.tsx      # Disabled when stock = 0
+│   └── StockWarning.tsx
+│
+├── checkout/
+│   ├── AddressForm.tsx
+│   ├── PaymentSelector.tsx
+│   ├── OrderSummary.tsx
+│   └── RazorpayButton.tsx
+│
+├── orders/
+│   ├── OrderCard.tsx
+│   ├── OrderStatusTimeline.tsx
+│   └── CancelOrderButton.tsx    # Enabled only when allowed
+│
+├── feedback/
+│   └── FeedbackForm.tsx
+│
+├── reviews/
+│   ├── ReviewForm.tsx
+│   └── ReviewList.tsx
+│
+├── home/
+│   ├── HeroCarousel.tsx
+│   ├── TrendingSection.tsx
+│   └── NewArrivals.tsx
+│
+├── common/
+│   ├── Footer.tsx
+│   ├── Loader.tsx
+│   ├── EmptyState.tsx
+│   ├── Modal.tsx
+│   └── Pagination.tsx
+│
+├── auth/
+│   └── AuthModal.tsx
+
+lib/
+├── api.ts                 # Axios instance (user token)
+├── helpers.ts             # Currency, date formatting
+├── constants.ts
+└── razorpay.ts            # Razorpay loader
+
+context/
+├── AuthContext.tsx
+├── CartContext.tsx
+├── CheckoutContext.tsx
