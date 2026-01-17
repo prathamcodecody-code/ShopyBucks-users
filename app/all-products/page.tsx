@@ -11,7 +11,12 @@ type Product = {
   title: string;
   price: number | string;
   img1?: string;
-  category?: { name: string };
+  slug?: string;
+  category?: { 
+    id?: number; 
+    name: string; 
+    slug?: string; 
+  };
 };
 
 export default function ProductsListPage() {
@@ -146,7 +151,7 @@ export default function ProductsListPage() {
           {!loading && products.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <ProductCard key={p.id} product={p as any} />
               ))}
             </div>
           )}
@@ -156,3 +161,4 @@ export default function ProductsListPage() {
     </div>
   );
 }
+
