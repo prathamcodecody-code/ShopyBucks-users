@@ -133,7 +133,7 @@ function AccountDetails({ user, setUser }: any) {
             value={form.name}
             editing={editing}
             icon={<User size={20} className="text-amazon-mutedText" />}
-            onChange={(v) => setForm({ ...form, name: v })}
+            onChange={(v: string) => setForm({ ...form, name: v })}
             placeholder="What is your name?"
           />
 
@@ -142,7 +142,7 @@ function AccountDetails({ user, setUser }: any) {
             value={form.email}
             editing={editing}
             icon={<Mail size={20} className="text-amazon-mutedText" />}
-            onChange={(v) => setForm({ ...form, email: v })}
+            onChange={(v: string) => setForm({ ...form, email: v })}
             placeholder="Enter email address"
           />
 
@@ -251,4 +251,5 @@ function OrdersShortcut() {
       </div>
     </div>
   );
+
 }
