@@ -91,11 +91,11 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
           
           {/* BECOME SELLER (Hidden on Mobile) */}
           <Link
-            href="https://seller.shopybucks.com/"
-            className="hidden sm:block text-[12px] font-black uppercase text-[#ff3f6c] hover:opacity-80 transition-opacity"
-          >
-            Become a Supplier
-          </Link>
+  href="https://seller.shopybucks.com/"
+  className="hidden sm:block text-[12px] font-black uppercase text-amazon-orange hover:opacity-80 transition-opacity"
+>
+  Become a Supplier
+</Link>
 
           {/* PROFILE */}
           <div
@@ -132,7 +132,12 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
                         {user.role === "SELLER" && (
                           <>
                             <hr className="my-2 border-gray-100" />
-                            <Link href="/seller/dashboard" className="p-3 text-[#ff3f6c] hover:bg-pink-50 rounded-lg transition-colors">Seller Dashboard</Link>
+                            <Link
+  href="https://seller.shopybucks.com/"
+  className="hidden sm:block text-[12px] font-black uppercase text-amazon-orange hover:opacity-80 transition-opacity"
+>
+Supplier Dashboard
+</Link>
                           </>
                         )}
 
@@ -176,3 +181,4 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
   );
 
 }
+
