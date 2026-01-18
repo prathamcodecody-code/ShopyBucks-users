@@ -84,7 +84,7 @@ export default function MobileMenu({
 
             {/* Seller Onboarding Link */}
             <Link
-              href="/seller/onboarding"
+              href="https://seller.shopybucks.com"
               onClick={onClose}
               className="flex items-center gap-3 p-4 bg-amazon-orange/10 border border-amazon-orange/20 rounded-xl group"
             >
@@ -136,4 +136,5 @@ export default function MobileMenu({
       </div>
     </div>
   );
+
 }
