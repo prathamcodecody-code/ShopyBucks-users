@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -10,97 +9,37 @@ export default function MegaMenu({ categoryId }: { categoryId: number }) {
 
   useEffect(() => {
     if (!categoryId) return;
-
-    let mounted = true;
-
-    async function load() {
-      try {
-        setLoading(true);
-
-        // 1️⃣ Load product types
-        const typeRes = await api.get(
-          `/product-types?categoryId=${categoryId}`
-        );
-
-        const baseTypes = Array.isArray(typeRes.data)
-          ? typeRes.data
-          : [];
-
-        // 2️⃣ Load subtypes for each type (parallel)
-        const enriched = await Promise.all(
-          baseTypes.map(async (t: any) => {
-            try {
-              const subRes = await api.get(
-                `/product-subtypes?typeId=${t.id}`
-              );
-              return {
-                ...t,
-                subtypes: Array.isArray(subRes.data) ? subRes.data : [],
-              };
-            } catch {
-              return { ...t, subtypes: [] };
-            }
-          })
-        );
-
-        if (mounted) setTypes(enriched);
-      } catch {
-        if (mounted) setTypes([]);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
+    setLoading(true);
+    api.get(`/product-types?categoryId=${categoryId}`).then((res) => {
+      setTypes(Array.isArray(res.data) ? res.data : []);
+      setLoading(false);
+    });
   }, [categoryId]);
 
   return (
-    <div className="absolute left-0 w-screen bg-white shadow-[0_20px_40px_rgba(0,0,0,0.1)] border-t py-8 z-50">
-      <div className="max-w-[1200px] mx-auto px-10">
-        {loading ? (
-          <div className="flex items-center gap-3 text-gray-500">
-            <div className="w-4 h-4 border-2 border-brandPink border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm">Loading categories...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-10">
-            {types.map((t) => (
-              <div key={t.id} className="space-y-4">
-                {/* TYPE */}
-                <Link
-                  href={`/all-products?categoryId=${categoryId}&typeId=${t.id}`}
-                  className="block font-bold uppercase text-sm text-gray-900 hover:text-brandPink"
-                >
-                  {t.name}
-                </Link>
-
-                {/* SUBTYPES */}
-                <div className="flex flex-col gap-2">
-                  {t.subtypes.length > 0 ? (
-                    t.subtypes.map((s: any) => (
-                      <Link
-                        key={s.id}
-                        href={`/all-products?categoryId=${categoryId}&subtypeId=${s.id}`}
-                        className="text-sm text-gray-500 hover:text-brandPink"
-                      >
-                        {s.name}
-                      </Link>
-                    ))
-                  ) : (
-                    <p className="text-xs italic text-gray-400">
-                      New arrivals soon
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="bg-white shadow-[0_15px_40px_rgba(0,0,0,0.15)] border border-gray-100 p-8 w-full max-w-[1244px] rounded-b-xl animate-in fade-in slide-in-from-top-1 duration-200">
+      {loading ? (
+        <div className="flex justify-center py-6">
+          <div className="w-6 h-6 border-2 border-amazon-orange border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+          {types.map((t) => (
+            <Link
+              key={t.id}
+              href={`/all-products?categoryId=${categoryId}&typeId=${t.id}`}
+              className="px-4 py-2 bg-gray-50 rounded-lg text-center font-bold text-[13px] text-gray-700 hover:bg-amazon-orange/10 hover:text-amazon-orange transition-all border border-transparent hover:border-amazon-orange/20"
+            >
+              {t.name}
+            </Link>
+          ))}
+          {types.length === 0 && (
+            <p className="col-span-full text-center text-gray-400 text-sm italic">
+              New collections arriving soon!
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
