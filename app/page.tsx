@@ -9,14 +9,8 @@ import ProductCard from "@/components/ProductCard";
 import TopCategories from "@/components/TopCategories";
 import { api } from "@/lib/api";
 import { useState } from "react";
+import {Product} from "@/lib/product";
 
-type Product = {
-  id: number;
-  title: string;
-  price: number | string;
-  img1?: string;
-  slug?: string;
-};
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
