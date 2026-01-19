@@ -4,25 +4,8 @@ import Link from "next/link";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import AddToWishlistButton from "@/components/wishlist/AddToWishlistButton";
 import { Star } from "lucide-react";
+import { Product } from "@/lib/product";
 
-type Product = {
-  id: number;
-  slug?: string;
-  title: string;
-  brand?: string;
-  price: number | string;
-  discountType?: "PERCENT" | "FLAT" | null;
-  discountValue?: number | null;
-  rating?: number;
-  reviewCount?: number;
-  img1?: string | null;
-  stock?: number;
-  category: {
-    id?: number;
-    name?: string;
-    slug?: string;
-  };
-};
 
 export default function ProductCard({ product }: { product?: Product }) {
   if (!product) return null;
@@ -137,5 +120,4 @@ export default function ProductCard({ product }: { product?: Product }) {
       </div>
     </div>
   );
-
 }
