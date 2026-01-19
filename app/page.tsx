@@ -16,11 +16,6 @@ type Product = {
   price: number | string;
   img1?: string;
   slug?: string;
-  category?: { 
-    id?: number; 
-    name: string; 
-    slug?: string; 
-  };
 };
 
 export default function HomePage() {
@@ -49,6 +44,12 @@ export default function HomePage() {
         <HeroCarousel />
       </section>
 
+    {/* CATEGORIES */}
+            <section className="max-w-7xl mx-auto px-6 mt-20">
+              <CategoryGrid />
+            </section>
+
+
       {/* MAIN CONTENT */}
       <div className="relative z-10">
 <section className="mt-15 py-10 bg-amazon-orange to-amazon-orange">
@@ -67,7 +68,7 @@ export default function HomePage() {
           <section className="max-w-7xl mx-auto px-6 mt-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {products.map((p) => (
-                <ProductCard key={p.id} product={p as any} />
+                <ProductCard key={p.id} product={p} />
               ))}
             </div>
           </section>
@@ -76,11 +77,7 @@ export default function HomePage() {
         {/* DEFAULT CONTENT */}
         {products.length > 0 && (
           <>
-            {/* CATEGORIES */}
-            <section className="max-w-7xl mx-auto px-6 mt-20">
-              <CategoryGrid />
-            </section>
-
+            
             {/* TRENDING */}
             <section className="mt-20 py-16 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600">
   <div className="max-w-7xl mx-auto px-6">
