@@ -5,7 +5,7 @@ export function Input({ placeholder, value, onChange, type = "text" }: any) {
     <input
       type={type}
       placeholder={placeholder}
-      className="w-full border border-gray-200 bg-gray-50/50 p-4 rounded-2xl focus:bg-white focus:border-amazon-orange focus:ring-4 focus:ring-amazon-orange/10 outline-none transition-all font-medium placeholder:text-gray-400"
+      className="w-full border-b-2 border-gray-200 py-3 outline-none focus:border-[#2874f0] transition-colors text-lg font-medium"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -17,18 +17,12 @@ export function PrimaryButton({ children, onClick, loading }: any) {
     <button
       onClick={onClick}
       disabled={loading}
-      className="w-full bg-amazon-orange hover:bg-amazon-orangeHover text-amazon-darkBlue py-4 rounded-2xl font-black transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-orange-100"
+      className="w-full bg-amazon-orange hover:bg-amazon-orangeHover text-white py-4 font-bold shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
     >
-      {loading ? (
-        <div className="flex items-center justify-center gap-2">
-          <div className="w-4 h-4 border-2 border-amazon-darkBlue border-t-transparent rounded-full animate-spin" />
-          <span>Please wait...</span>
-        </div>
-      ) : children}
+      {loading ? "Please wait..." : children}
     </button>
   );
 }
-
 export function SecondaryButton({ children, onClick }: any) {
   return (
     <button
