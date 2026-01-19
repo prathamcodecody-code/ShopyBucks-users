@@ -3,151 +3,143 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/app/context/AuthContext";
-import { HiXMark, HiOutlineArrowLeft, HiOutlineShieldCheck } from "react-icons/hi2";
+import { HiXMark, HiOutlineShieldCheck } from "react-icons/hi2";
+import { Input, PrimaryButton, SecondaryButton, BackButton, OtpStep } from "@/components/Home/AuthComponents";
 
-export default function AuthModal({ show, onClose }: any) {
+type Step = "choice" | "signup" | "signupOtp" | "loginPassword" | "loginOtp" | "loginOtpVerify";
+
+export default function AuthModal({ show, onClose }: { show: boolean; onClose: () => void }) {
   const { loginWithToken } = useAuth();
+  const [step, setStep] = useState<Step>("choice");
+  const [loading, setLoading] = useState(false);
 
-  const [step, setStep] = useState<"details" | "otp">("details");
+  // Form State
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const sendOtp = async () => {
-    if (!phone || !name || !email) return;
-    setLoading(true);
-    try {
-      await api.post("/auth/send-otp", { phone, name, email });
-      setStep("otp");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    setLoading(true);
-    try {
-      const res = await api.post("/auth/verify-otp", { phone, otp });
-      loginWithToken(res.data.token);
-      window.dispatchEvent(new Event("auth-changed"));
-      onClose();
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!show) return null;
 
+  const handleSignup = async () => {
+    setLoading(true);
+    try {
+      await api.post("/auth/signup", { name, email, phone, password });
+      setStep("signupOtp");
+    } finally { setLoading(false); }
+  };
+
+  const handleVerifySignup = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/signup/verify-otp", { phone, otp });
+      loginWithToken(res.data.token);
+      onClose();
+    } finally { setLoading(false); }
+  };
+
+  const handleLoginPassword = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/login/password", { email, password });
+      loginWithToken(res.data.token);
+      onClose();
+    } finally { setLoading(false); }
+  };
+
+  const handleSendLoginOtp = async () => {
+    setLoading(true);
+    try {
+      await api.post("/auth/login/otp/send", { phone });
+      setStep("loginOtpVerify");
+    } finally { setLoading(false); }
+  };
+
+  const handleVerifyLoginOtp = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post("/auth/login/otp/verify", { phone, otp });
+      loginWithToken(res.data.token);
+      onClose();
+    } finally { setLoading(false); }
+  };
+
   return (
-    <div className="fixed inset-0 bg-amazon-darkBlue/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-white w-full max-w-[420px] rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+    <div className="fixed inset-0 bg-amazon-darkBlue/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-[420px] rounded-[2rem] shadow-2xl p-10 relative animate-in zoom-in-95 duration-300">
         
-        {/* CLOSE BUTTON */}
-        <button 
-          onClick={onClose}
-          className="absolute right-6 top-6 p-2 hover:bg-gray-100 rounded-full text-amazon-mutedText transition-colors"
-        >
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-900">
           <HiXMark size={24} />
         </button>
 
-        <div className="p-10">
-          {step === "details" && (
-            <div className="space-y-6">
-              <div className="space-y-1">
-                <h2 className="text-2xl font-black text-amazon-text tracking-tight">Create Account</h2>
-                <p className="text-xs text-amazon-mutedText uppercase font-bold tracking-widest">Join Shopy Bucks today</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-amazon-text uppercase ml-1">Full Name</label>
-                  <input
-                    placeholder="First and last name"
-                    className="w-full border border-gray-300 focus:border-amazon-orange focus:ring-4 focus:ring-amazon-orange/10 outline-none p-3.5 rounded-xl transition-all font-medium"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-amazon-text uppercase ml-1">Email Address</label>
-                  <input
-                    type="email"
-                    placeholder="name@example.com"
-                    className="w-full border border-gray-300 focus:border-amazon-orange focus:ring-4 focus:ring-amazon-orange/10 outline-none p-3.5 rounded-xl transition-all font-medium"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-amazon-text uppercase ml-1">Mobile Number</label>
-                  <input
-                    type="tel"
-                    placeholder="10-digit number"
-                    className="w-full border border-gray-300 focus:border-amazon-orange focus:ring-4 focus:ring-amazon-orange/10 outline-none p-3.5 rounded-xl transition-all font-medium"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={sendOtp}
-                disabled={loading}
-                className="w-full bg-amazon-orange hover:bg-amazon-orangeHover text-amazon-darkBlue font-black py-4 rounded-2xl shadow-lg shadow-orange-100 transition-all active:scale-[0.98] disabled:opacity-50"
-              >
-                {loading ? "Sending Code..." : "Continue"}
-              </button>
-
-              <p className="text-[10px] text-center text-amazon-mutedText px-4 leading-relaxed uppercase font-bold tracking-tight">
-                By continuing, you agree to our <span className="text-amazon-darkBlue underline cursor-pointer">Terms of Service</span> and <span className="text-amazon-darkBlue underline cursor-pointer">Privacy Policy</span>.
-              </p>
+        {/* --- CHOICE STEP --- */}
+        {step === "choice" && (
+          <div className="space-y-8 py-4">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-black tracking-tight">Welcome</h2>
+              <p className="text-gray-500 text-sm">Join ShopyBucks or Sign in to continue</p>
             </div>
-          )}
-
-          {step === "otp" && (
-            <div className="space-y-6">
-              <button 
-                onClick={() => setStep("details")}
-                className="flex items-center gap-2 text-xs font-bold text-amazon-mutedText hover:text-amazon-text transition-colors"
-              >
-                <HiOutlineArrowLeft /> Change Details
-              </button>
-
-              <div className="space-y-1">
-                <h2 className="text-2xl font-black text-amazon-text tracking-tight">Verify Identity</h2>
-                <p className="text-xs text-amazon-mutedText font-medium">
-                  We've sent a 6-digit code to <span className="font-black text-amazon-text">{phone}</span>
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-amazon-text uppercase ml-1">One-Time Password</label>
-                <input
-                  placeholder="0 0 0 0 0 0"
-                  maxLength={6}
-                  className="w-full border border-gray-300 focus:border-amazon-orange focus:ring-4 focus:ring-amazon-orange/10 outline-none p-4 rounded-xl text-center text-2xl font-black tracking-[0.5em] transition-all"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                />
-              </div>
-
-              <button
-                onClick={verifyOtp}
-                disabled={loading}
-                className="w-full bg-amazon-orange hover:bg-amazon-orangeHover text-amazon-darkBlue font-black py-4 rounded-2xl shadow-lg shadow-orange-100 transition-all active:scale-[0.98] disabled:opacity-50"
-              >
-                {loading ? "Verifying..." : "Secure Login"}
-              </button>
-
-              <div className="flex items-center justify-center gap-2 text-[10px] font-black text-amazon-success uppercase tracking-widest bg-green-50 py-2 rounded-lg">
-                <HiOutlineShieldCheck size={16} /> 256-Bit Encrypted
-              </div>
+            <div className="space-y-3">
+              <PrimaryButton onClick={() => setStep("signup")}>Create Account</PrimaryButton>
+              <SecondaryButton onClick={() => setStep("loginPassword")}>Login with Password</SecondaryButton>
+              <SecondaryButton onClick={() => setStep("loginOtp")}>Login with OTP</SecondaryButton>
             </div>
-          )}
+          </div>
+        )}
+
+        {/* --- SIGNUP STEP --- */}
+        {step === "signup" && (
+          <div className="space-y-5">
+            <BackButton onClick={() => setStep("choice")} />
+            <h3 className="text-xl font-black">Create Account</h3>
+            <div className="space-y-3">
+              <Input placeholder="Full Name" value={name} onChange={setName} />
+              <Input placeholder="Email" type="email" value={email} onChange={setEmail} />
+              <Input placeholder="Phone" type="tel" value={phone} onChange={setPhone} />
+              <Input placeholder="Password" type="password" value={password} onChange={setPassword} />
+            </div>
+            <PrimaryButton loading={loading} onClick={handleSignup}>Create Account</PrimaryButton>
+          </div>
+        )}
+
+        {/* --- LOGIN PASSWORD --- */}
+        {step === "loginPassword" && (
+          <div className="space-y-5">
+            <BackButton onClick={() => setStep("choice")} />
+            <h3 className="text-xl font-black">Welcome Back</h3>
+            <div className="space-y-3">
+              <Input placeholder="Email" type="email" value={email} onChange={setEmail} />
+              <Input placeholder="Password" type="password" value={password} onChange={setPassword} />
+            </div>
+            <PrimaryButton loading={loading} onClick={handleLoginPassword}>Login</PrimaryButton>
+          </div>
+        )}
+
+        {/* --- LOGIN OTP REQUEST --- */}
+        {step === "loginOtp" && (
+          <div className="space-y-5">
+            <BackButton onClick={() => setStep("choice")} />
+            <h3 className="text-xl font-black">OTP Login</h3>
+            <Input placeholder="Phone Number" type="tel" value={phone} onChange={setPhone} />
+            <PrimaryButton loading={loading} onClick={handleSendLoginOtp}>Send Code</PrimaryButton>
+          </div>
+        )}
+
+        {/* --- OTP VERIFICATION (COMMON) --- */}
+        {(step === "signupOtp" || step === "loginOtpVerify") && (
+          <OtpStep
+            phone={phone}
+            otp={otp}
+            setOtp={setOtp}
+            loading={loading}
+            onVerify={step === "signupOtp" ? handleVerifySignup : handleVerifyLoginOtp}
+            onBack={() => setStep(step === "signupOtp" ? "signup" : "loginOtp")}
+          />
+        )}
+
+        <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amazon-success">
+          <HiOutlineShieldCheck size={16} /> 256-Bit SSL Secured
         </div>
       </div>
     </div>
