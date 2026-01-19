@@ -13,16 +13,8 @@ export default function CategoryGrid() {
   ];
 
   return (
-    <section className="mt-16 mb-20 max-w-[1244px] mx-auto px-4">
-      {/* Centered Heading */}
-      <div className="text-center mb-12 space-y-2">
-        <h2 className="text-3xl font-black text-amazon-text uppercase tracking-tighter">
-          Shop By <span className="text-[#4F1271]">Category</span>
-        </h2>
-        <div className="w-20 h-1 bg-amazon-orange mx-auto rounded-full" />
-      </div>
-
-      {/* Centered Flex Grid */}
+    <section className="mt-8 mb-20 max-w-[1244px] mx-auto px-4">
+      {/* Centered Flex Grid - Heading Removed */}
       <div className="flex flex-wrap justify-center gap-8 md:gap-12 lg:gap-16">
         {categories.map((c) => (
           <Link
