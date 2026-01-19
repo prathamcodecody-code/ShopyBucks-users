@@ -15,7 +15,7 @@ export default function ProductCard({ product }: { product?: Product }) {
     : "/placeholder.png";
 
     console.log("Rendering ProductCard for:", product.title , product.category?.slug);
-  const productUrl = `/${product.category?.slug}/${product.slug}-${product.id}`;
+  const productUrl = `/${product.category?.slug}/${product.slug}`;
 
   const price = Number(product.price) || 0;
   let finalPrice = price;
