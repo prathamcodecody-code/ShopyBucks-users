@@ -7,14 +7,18 @@ import { HiOutlineShoppingBag, HiOutlineShoppingCart, HiOutlineUser } from "reac
 import { LuStore } from "react-icons/lu"; 
 import { useRouter } from "next/navigation";
 import MobileMenu from "./MobileMenu";
+import MegaMenu from "./MegaMenu";
 import { useAuth } from "@/app/context/AuthContext";
+import { useAuthModal } from "@/app/auth/AuthModalContext";
 
 export default function NavbarClient({ categories }: { categories: any[] }) {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { openAuthModal } = useAuthModal(); // ADD THIS LINE - destructure openAuthModal
   const [query, setQuery] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
 
   const handleSearch = () => {
     if (!query.trim()) return;
@@ -22,17 +26,18 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
   };
 
   const openAuth = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    window.dispatchEvent(new Event("open-auth-modal"));
+    openAuthModal(); // Now this will work
+    setShowProfileMenu(false);
   };
 
   return (
-    <div className="bg-white w-full">
-      {/* TOP NAV - STICKY */}
+    <div className="bg-[#f1f3f6] w-full">
+      {/* SECTION 1: TOP NAV - STICKY */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-[60] shadow-sm">
         <div className="max-w-[1244px] mx-auto px-4 h-16 md:h-20 flex items-center justify-between gap-4 md:gap-8">
           
-          {/* LOGO & MOBILE TRIGGER */}
           <div className="flex items-center gap-4 shrink-0">
             <button 
               onClick={() => setIsMobileMenuOpen(true)} 
@@ -41,15 +46,14 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
               <FiMenu size={24} />
             </button>
             <Link href="/" className="flex items-center shrink-0">
-  {/* Increased width from w-10 to w-32 (mobile) and w-44 (desktop) */}
-  <div className="relative w-32 md:w-44 transition-transform group-hover:scale-105 duration-300">
-    <img 
-      src="/shopybucks.jpg" 
-      alt="ShopyBucks Logo" 
-      className="w-full h-auto object-contain" // Changed h-full to h-auto
-    />
-  </div>
-</Link>
+              <div className="relative w-32 md:w-44 transition-transform group-hover:scale-105 duration-300">
+                <img 
+                  src="/shopybucks.jpg" 
+                  alt="ShopyBucks Logo" 
+                  className="w-full h-auto object-contain" 
+                />
+              </div>
+            </Link>
           </div>
 
           {/* SEARCH BAR */}
@@ -66,8 +70,6 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
 
           {/* ACTIONS */}
           <div className="flex items-center gap-4 lg:gap-8 shrink-0">
-            
-            {/* PROFILE / LOGIN */}
             <div 
               className="relative group cursor-pointer"
               onMouseEnter={() => setShowProfileMenu(true)}
@@ -88,7 +90,12 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
                     {!user ? (
                       <div className="p-4 border-b flex justify-between items-center">
                         <span className="font-medium text-gray-600 italic">New customer?</span>
-                        <button onClick={openAuth} className="text-[#2874f0] font-black uppercase tracking-tighter hover:underline">Sign Up</button>
+                        <button 
+                          onClick={(e) => openAuth(e)} 
+                          className="text-[#2874f0] font-black uppercase tracking-tighter hover:underline"
+                        >
+                          Sign Up
+                        </button>
                       </div>
                     ) : (
                       <div className="p-3 border-b bg-gray-50 font-black text-[#4F1271] uppercase tracking-tighter">Welcome, {user.name}</div>
@@ -112,16 +119,14 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
               )}
             </div>
 
-            {/* CART */}
             <Link href="/cart" className="flex items-center gap-2 group font-bold transition-colors hover:text-amazon-orange">
               <div className="relative">
-                <HiOutlineShoppingBag size={24} />
+                <HiOutlineShoppingCart size={24} />
                 <span className="absolute -top-2 -right-2 bg-amazon-orange text-white text-[10px] font-black h-4 w-4 flex items-center justify-center rounded-full border-2 border-white">0</span>
               </div>
               <span className="hidden lg:block text-sm uppercase tracking-tighter">Cart</span>
             </Link>
 
-            {/* BECOME A SELLER */}
             <Link 
               href="https://seller.shopybucks.com/" 
               className="hidden xl:flex items-center gap-2 group transition-colors hover:text-amazon-orange"
@@ -129,12 +134,40 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
               <LuStore size={20} className="text-gray-700 group-hover:text-amazon-orange transition-colors" />
               <span className="text-sm font-black uppercase tracking-tighter whitespace-nowrap">Become a Seller</span>
             </Link>
-
           </div>
         </div>
       </div>
 
-      {/* MOBILE MENU COMPONENT */}
+      {/* SECTION 2: CATEGORY BAR (NAME ONLY) */}
+      <div className="hidden md:block bg-white border-b border-gray-100 shadow-sm relative">
+        <div className="max-w-[1244px] mx-auto px-4 flex items-center justify-center gap-10 lg:gap-16">
+          {categories.map((c) => (
+            <div 
+              key={c.id} 
+              onMouseEnter={() => setActiveCategory(c.id)}
+              onMouseLeave={() => setActiveCategory(null)}
+              className="relative py-4 group cursor-pointer"
+            >
+              <Link 
+                href={`/all-products?categoryId=${c.id}`}
+                className="text-[13px] font-black text-gray-700 uppercase tracking-tight flex items-center gap-1 group-hover:text-amazon-orange transition-colors"
+              >
+                {c.name}
+                <FiChevronDown className={`transition-transform duration-200 ${activeCategory === c.id ? 'rotate-180' : ''}`} />
+              </Link>
+
+              {/* MegaMenu anchored strictly below the text */}
+              {activeCategory === c.id && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 z-50 pt-0 w-max">
+                  <MegaMenu categoryId={c.id} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* MOBILE MENU */}
       {isMobileMenuOpen && (
         <MobileMenu 
           categories={categories} 
