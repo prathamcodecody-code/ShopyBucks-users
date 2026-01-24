@@ -38,7 +38,8 @@ export default function NewArrivals() {
   }, []);
 
   return (
-    <section className="bg-amazon-lightGray py-16">
+    /* Changed bg-amazon-lightGray to bg-white */
+    <section className="bg-white py-16">
       <div className="max-w-7xl mx-auto px-4">
         
         {/* HEADER SECTION */}
@@ -65,8 +66,8 @@ export default function NewArrivals() {
           </Link>
         </div>
 
-        {/* GRID CONTAINER */}
-        <div className="bg-white border border-amazon-borderGray p-6 shadow-sm">
+        {/* GRID CONTAINER - Removed border and shadow for a cleaner look on white background */}
+        <div className="p-0">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
             {loading ? (
               Array.from({ length: 8 }).map((_, i) => (
