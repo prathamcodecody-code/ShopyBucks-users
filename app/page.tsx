@@ -46,12 +46,11 @@ export default function HomePage() {
 
       {/* MAIN CONTENT */}
       <div className="relative z-10">
-<section className="mt-15 py-10 bg-amazon-orange to-amazon-orange">
-<div className="max-w-7xl mx-auto px-6">
-<TopCategories />
-</div>
+<section className="mt-15 py-10 bg-white">
+  <div className="max-w-7xl mx-auto px-6">
+    <TopCategories />
+  </div>
 </section>
-
         {/* FILTER */}
         <section className="max-w-7xl mx-auto px-6 mt-6">
           <HomeFilter onFilter={applyFilters} />
@@ -73,7 +72,7 @@ export default function HomePage() {
           <>
             
             {/* TRENDING */}
-            <section className="mt-20 py-16 bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600">
+            <section className="mt-20 py-16 bg-white">
   <div className="max-w-7xl mx-auto px-6">
     <TrendingNow />
   </div>
