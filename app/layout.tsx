@@ -15,7 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-brandCream/30">
+      {/* Changed bg-brandCream/30 to bg-white */}
+      <body className="bg-white">
         <AuthProvider>
           <WishlistProvider>
             <CheckoutProvider>
