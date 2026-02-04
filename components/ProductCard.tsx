@@ -6,7 +6,6 @@ import AddToWishlistButton from "@/components/wishlist/AddToWishlistButton";
 import { Star } from "lucide-react";
 import { Product } from "@/lib/product";
 
-
 export default function ProductCard({ product }: { product?: Product }) {
   if (!product) return null;
 
@@ -14,7 +13,6 @@ export default function ProductCard({ product }: { product?: Product }) {
     ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/products/${product.img1}`
     : "/placeholder.png";
 
-    console.log("Rendering ProductCard for:", product.title , product.category?.slug);
   const productUrl = `/${product.category?.slug}/${product.slug}`;
 
   const price = Number(product.price) || 0;
@@ -32,87 +30,80 @@ export default function ProductCard({ product }: { product?: Product }) {
   const hasDiscount = finalPrice < price;
 
   return (
-    <div className="group relative bg-white border border-amazon-borderGray rounded-sm flex flex-col h-full hover:shadow-xl transition-shadow duration-300">
+    <div className="group relative bg-white border border-genz-border rounded-genz flex flex-col h-full hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all duration-500 overflow-hidden">
       
-      {/* Wishlist - Positioned for Amazon style */}
-      <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-        <AddToWishlistButton productId={product.id} />
+      {/* 1. WISHLIST pill */}
+      <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+        <div className="bg-white/80 backdrop-blur-md p-1 rounded-full shadow-sm border border-genz-border">
+          <AddToWishlistButton productId={product.id} />
+        </div>
       </div>
 
       <Link href={productUrl} className="flex flex-col flex-1">
-        {/* Image Container */}
-        <div className="relative aspect-square w-full bg-amazon-lightGray/30 p-4 overflow-hidden">
+        {/* 2. IMAGE CONTAINER: aspect-[4/5] ensures it never grows too big */}
+        <div className="relative aspect-[4/5] w-full bg-genz-bg overflow-hidden p-6">
           <img
             src={imageUrl}
             alt={product.title}
-            className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+            /* The classes below (absolute inset-0 w-full h-full object-contain) 
+               mimic the Next.js 'fill' behavior perfectly.
+            */
+            className="absolute inset-0 w-full h-full object-contain p-6 transition-transform duration-700 group-hover:scale-110"
           />
           
-          {/* Discount Badge */}
+          {/* 3. DISCOUNT BADGE */}
           {hasDiscount && (
-            <div className="absolute top-0 left-0 bg-amazon-danger text-white text-[11px] font-bold px-2 py-1 rounded-br-sm shadow-sm">
-              {discountPercent}% OFF
+            <div className="absolute top-3 left-3 bg-genz-ink text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg tracking-widest uppercase">
+              -{discountPercent}%
             </div>
           )}
         </div>
 
-        {/* Info Area */}
-        <div className="p-3 flex flex-col flex-1 space-y-1.5">
-          {/* Brand/Category Label */}
-          <p className="text-[11px] font-bold text-amazon-mutedText uppercase tracking-wider">
-            {product.brand || product.category.name}
+        {/* 4. INFO AREA */}
+        <div className="p-5 flex flex-col flex-1">
+          <p className="text-[10px] font-black text-genz-accent uppercase tracking-[0.2em] mb-1">
+            {product.category?.name}
           </p>
 
-          {/* Title */}
-          <h3 className="text-[13px] leading-tight text-amazon-text font-medium line-clamp-2 group-hover:text-amazon-orangeHover transition-colors">
+          <h3 className="text-sm font-bold text-genz-ink leading-snug line-clamp-2 group-hover:text-genz-accent transition-colors mb-2">
             {product.title}
           </h3>
 
-          {/* Ratings */}
-          <div className="flex items-center gap-1">
-            <div className="flex text-amazon-orange">
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex text-genz-accent">
               {[...Array(5)].map((_, i) => (
                 <Star 
                   key={i} 
                   size={12} 
                   fill={i < Math.floor(product.rating || 0) ? "currentColor" : "none"} 
-                  className={i < Math.floor(product.rating || 0) ? "" : "text-amazon-borderGray"}
+                  className={i < Math.floor(product.rating || 0) ? "" : "text-genz-border"}
                 />
               ))}
             </div>
             {product.reviewCount && (
-              <span className="text-xs text-blue-600 font-medium">
-                {product.reviewCount.toLocaleString()}
+              <span className="text-[10px] text-genz-muted font-bold tracking-tighter">
+                ({product.reviewCount.toLocaleString()})
               </span>
             )}
           </div>
 
-          {/* Price Section */}
-          <div className="pt-1">
-            <div className="flex items-baseline gap-1">
-              <span className="text-xs font-bold text-amazon-text">₹</span>
-              <span className="text-2xl font-bold text-amazon-text tracking-tighter">
-                {finalPrice.toLocaleString()}
+          <div className="mt-auto pt-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-black text-genz-ink tracking-tight">
+                ₹{finalPrice.toLocaleString()}
               </span>
+              {hasDiscount && (
+                <span className="text-xs text-genz-muted line-through font-medium">
+                  ₹{price.toLocaleString()}
+                </span>
+              )}
             </div>
-            
-            {hasDiscount && (
-              <div className="text-xs text-amazon-mutedText">
-                M.R.P: <span className="line-through">₹{price.toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Delivery Tag (Amazon aesthetic) */}
-          <div className="flex items-center gap-1 mt-auto">
-            <span className="text-[11px] font-bold text-amazon-success">Free Delivery</span>
-            <span className="text-[11px] text-amazon-mutedText">by tomorrow</span>
           </div>
         </div>
       </Link>
 
-      {/* Add to Cart - Amazon style yellow button */}
-      <div className="px-3 pb-4 mt-2">
+      {/* 5. ADD TO CART */}
+      <div className="px-4 pb-5">
         <AddToCartButton
           productId={product.id}
           stock={product.stock ?? 0}
