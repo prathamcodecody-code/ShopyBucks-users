@@ -21,7 +21,6 @@ export default function AddToCartButton({
   disabled = false,
 }: AddToCartButtonProps) {
   const { user } = useAuth();
-
   const [showAuth, setShowAuth] = useState(false);
   const [toast, setToast] = useState<{
     type: "success" | "error";
@@ -36,50 +35,36 @@ export default function AddToCartButton({
     }
 
     if (!sizeId) {
-  setToast({
-    type: "error",
-    message: "Please select a size",
-  });
-  return;
-}
+      setToast({ type: "error", message: "Select your size first" });
+      return;
+    }
 
     try {
       setLoading(true);
-
-      await api.post("/cart/add", {
-        productId,
-        sizeId, // ✅ THIS WAS MISSING
-      });
-
-      setToast({
-        type: "success",
-        message: "Product added to cart!",
-      });
+      await api.post("/cart/add", { productId, sizeId });
+      setToast({ type: "success", message: "Added to your bag!" });
     } catch (err: any) {
-      const message =
-        err?.response?.data?.message || "Failed to add product to cart";
+      const message = err?.response?.data?.message || "Something went wrong";
       setToast({ type: "error", message });
     } finally {
       setLoading(false);
     }
   };
 
-  
-
   return (
     <>
       <button
         onClick={handleAddToCart}
         disabled={disabled || loading || stock < 1}
-        className={`w-full px-6 py-3 rounded-lg font-semibold transition
+        className={`w-full py-4 rounded-full font-black text-xs uppercase tracking-widest transition-all duration-300 active:scale-95 shadow-lg
           ${
             stock < 1
-              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-              : "bg-amazon-orange text-white hover:bg-amazon-orangeHover"
+              ? "bg-genz-border text-genz-muted cursor-not-allowed"
+              : "bg-genz-ink text-white hover:bg-genz-accent hover:shadow-indigo-500/20"
           }
         `}
       >
-        {loading ? <ButtonLoader /> : "Add to Cart"}
+        {loading ? <ButtonLoader /> : stock < 1 ? "Sold Out" : "Add to Bag"}
       </button>
 
       {toast && (
