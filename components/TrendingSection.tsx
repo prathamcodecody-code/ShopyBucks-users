@@ -49,14 +49,14 @@ export default function TrendingNow() {
   /* ---------------- LOADING STATE ---------------- */
   if (loading) {
     return (
-      <section className="max-w-7xl mx-auto px-4 py-12">
-        <div className="h-8 w-48 bg-amazon-borderGray/30 animate-pulse rounded mb-8" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-12">
+        <div className="h-10 w-64 bg-genz-border animate-pulse rounded-full mb-8" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white p-4 border border-amazon-borderGray rounded-lg">
-              <div className="aspect-square bg-amazon-lightGray animate-pulse rounded-md mb-4" />
-              <div className="h-4 w-3/4 bg-amazon-lightGray animate-pulse rounded mb-2" />
-              <div className="h-4 w-1/2 bg-amazon-lightGray animate-pulse rounded" />
+            <div key={i} className="bg-genz-card p-4 rounded-genz border border-genz-border">
+              <div className="aspect-[4/5] bg-genz-bg animate-pulse rounded-2xl mb-4" />
+              <div className="h-4 w-3/4 bg-genz-bg animate-pulse rounded-full mb-2" />
+              <div className="h-4 w-1/2 bg-genz-bg animate-pulse rounded-full" />
             </div>
           ))}
         </div>
@@ -64,63 +64,80 @@ export default function TrendingNow() {
     );
   }
 
-  /* ---------------- EMPTY STATE ---------------- */
-  if (!items.length) {
-    return null; // Better to hide the section entirely if no data
-  }
+  if (!items.length) return null;
 
   /* ---------------- MAIN UI ---------------- */
   return (
-    <section className="max-w-7xl mx-auto px-4 py-10">
-      {/* Header with Amazon-style "View All" link */}
-      <div className="flex items-end justify-between mb-6 pb-2 border-b border-amazon-borderGray">
-        <div className="flex items-center gap-2">
-          <div className="bg-amazon-orange/10 p-2 rounded-lg">
-            <TrendingUp size={24} className="text-amazon-orange" />
-          </div>
-          <h2 className="text-2xl font-black text-amazon-darkBlue tracking-tight uppercase">
-            Trending Now
-          </h2>
-        </div>
+    <section className="bg-genz-bg py-12 px-4 sm:px-6 md:px-8">
+      <div className="max-w-7xl mx-auto">
         
-        <Link 
-          href="/all-products" 
-          className="group flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-amazon-orange transition-colors"
-        >
-          See more
-          <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-        </Link>
-      </div>
-
-      {/* Grid Layout */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:gap-6">
-        {items.map((product) => (
-          <div 
-            key={product.id} 
-            className="transform transition-all duration-300 hover:-translate-y-1"
-          >
-            <ProductCard product={product} />
+        {/* HEADER: Minimal and Bold */}
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-3">
+            <div className="bg-genz-softAccent p-2.5 rounded-2xl">
+              <TrendingUp size={24} className="text-genz-accent" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black text-genz-ink tracking-tighter uppercase">
+              Trending Now
+            </h2>
           </div>
-        ))}
+          
+          <Link 
+            href="/all-products" 
+            className="group flex items-center gap-2 text-sm font-bold text-genz-muted hover:text-genz-accent transition-all"
+          >
+            Explore All
+            <div className="bg-white p-1 rounded-full shadow-sm group-hover:bg-genz-accent group-hover:text-white transition-all">
+              <ChevronRight size={16} />
+            </div>
+          </Link>
+        </div>
+
+        {/* GRID LAYOUT: Responsive flex-row for mobile scroll, grid for desktop */}
+        <div className="flex md:grid md:grid-cols-4 overflow-x-auto md:overflow-visible gap-6 no-scrollbar pb-4 snap-x">
+          {items.map((product) => (
+            <div 
+              key={product.id} 
+              className="min-w-[280px] md:min-w-0 snap-center transition-all duration-500"
+            >
+              {/* Note: Ensure ProductCard also uses the 'genz' styling internally */}
+              <ProductCard product={product} />
+            </div>
+          ))}
+        </div>
+
+        {/* MODERN FOOTER: Minimalist "Vibe" Badges */}
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-genz-card border border-genz-border p-6 rounded-genz flex items-center gap-4 hover:border-genz-accent transition-colors group">
+            <div className="text-2xl group-hover:scale-110 transition-transform">⚡</div>
+            <div>
+              <p className="font-black text-genz-ink uppercase text-xs tracking-widest">Instant Dispatch</p>
+              <p className="text-genz-muted text-[11px] font-medium">Ready when you are.</p>
+            </div>
+          </div>
+          
+          <div className="bg-genz-card border border-genz-border p-6 rounded-genz flex items-center gap-4 hover:border-genz-accent transition-colors group">
+            <div className="text-2xl group-hover:scale-110 transition-transform">💎</div>
+            <div>
+              <p className="font-black text-genz-ink uppercase text-xs tracking-widest">Premium Pick</p>
+              <p className="text-genz-muted text-[11px] font-medium">Curated quality only.</p>
+            </div>
+          </div>
+
+          <div className="bg-genz-card border border-genz-border p-6 rounded-genz flex items-center gap-4 hover:border-genz-accent transition-colors group">
+            <div className="text-2xl group-hover:scale-110 transition-transform">🔄</div>
+            <div>
+              <p className="font-black text-genz-ink uppercase text-xs tracking-widest">Flex Returns</p>
+              <p className="text-genz-muted text-[11px] font-medium">Easy, no-stress swaps.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Trust Badge/Banner (Optional Amazon-style addition) */}
-      <div className="mt-10 bg-white border border-amazon-borderGray p-4 rounded-lg flex flex-wrap items-center justify-around gap-4 shadow-sm">
-        <div className="flex items-center gap-2 text-xs font-bold text-amazon-mutedText uppercase tracking-widest">
-          <span className="text-amazon-success text-lg font-black italic">✓</span>
-          Fast Delivery
-        </div>
-        <div className="h-4 w-[1px] bg-amazon-borderGray hidden md:block" />
-        <div className="flex items-center gap-2 text-xs font-bold text-amazon-mutedText uppercase tracking-widest">
-          <span className="text-amazon-orange text-lg font-black italic">★</span>
-          Top Quality
-        </div>
-        <div className="h-4 w-[1px] bg-amazon-borderGray hidden md:block" />
-        <div className="flex items-center gap-2 text-xs font-bold text-amazon-mutedText uppercase tracking-widest">
-          <span className="text-amazon-darkBlue text-lg font-black">↺</span>
-          Easy Returns
-        </div>
-      </div>
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </section>
   );
 }
