@@ -3,6 +3,7 @@ export type Product = {
   title: string;
   price: number | string;
   img1?: string | null;
+  img2?: string | null;
   slug?: string;
   brand?: string;
   stock?: number;
@@ -16,4 +17,5 @@ export type Product = {
     name: string;
     slug: string;
   };
+
 };
