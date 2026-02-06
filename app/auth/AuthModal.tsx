@@ -5,18 +5,18 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/app/context/AuthContext";
 import { HiXMark } from "react-icons/hi2";
 import { Input, PrimaryButton } from "@/components/Home/AuthComponents";
+import { useAuthModal } from "@/app/auth/AuthModalContext";
 
 export default function AuthModal({ show, onClose }: { show: boolean; onClose: () => void }) {
   const { loginWithToken } = useAuth();
   const [loading, setLoading] = useState(false);
-  
-  // Login State
+  const { openRegister } = useAuthModal();
+
   const [identifier, setIdentifier] = useState(""); 
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"identifier" | "password" | "otp">("identifier");
 
-  // Reset steps when modal opens/closes
   useEffect(() => {
     if (show) {
       setStep("identifier");
@@ -26,18 +26,11 @@ export default function AuthModal({ show, onClose }: { show: boolean; onClose: (
     }
   }, [show]);
 
-  // Handle ESC key to close
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose]);
-
   const handleIdentifierSubmit = async () => {
+    if (!identifier) return;
     setLoading(true);
     try {
+      // Logic: Email contains @, otherwise assume Mobile
       if (identifier.includes("@")) {
         setStep("password");
       } else {
@@ -45,7 +38,7 @@ export default function AuthModal({ show, onClose }: { show: boolean; onClose: (
         setStep("otp");
       }
     } catch (err) {
-      alert("Invalid identifier or server error");
+      alert("Something went wrong. Please check your entry.");
     } finally {
       setLoading(false);
     }
@@ -61,7 +54,7 @@ export default function AuthModal({ show, onClose }: { show: boolean; onClose: (
         res = await api.post("/auth/login/otp/verify", { phone: identifier, otp });
       }
       loginWithToken(res.data.token);
-      onClose(); // Call parent onClose immediately
+      onClose();
     } catch (err) {
       alert("Login failed. Please check your credentials.");
     } finally {
@@ -69,103 +62,115 @@ export default function AuthModal({ show, onClose }: { show: boolean; onClose: (
     }
   };
 
-  // Prevent background scrolling when modal is open
-  useEffect(() => {
-    if (show) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "unset";
-  }, [show]);
-
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[999] p-4">
-      {/* Click outside to close */}
+    <div className="fixed inset-0 bg-genz-ink/60 backdrop-blur-sm flex items-center justify-center z-[999] p-4">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="bg-white w-full max-w-[750px] h-[520px] rounded-sm shadow-2xl flex relative overflow-hidden animate-in zoom-in-95 duration-300 z-[1000]">
+      <div className="bg-white w-full max-w-[750px] h-[520px] rounded-genz shadow-2xl flex relative overflow-hidden animate-in zoom-in-95 duration-300 z-[1000]">
         
-        {/* LEFT PANEL: Branding (Updated to Orange) */}
-        <div className="hidden md:flex flex-col w-[40%] bg-amazon-orange p-10 text-amazon-darkBlue justify-between">
-          <div className="space-y-4">
-            <h2 className="text-3xl font-black">Login</h2>
-            <p className="text-lg font-bold opacity-90 leading-relaxed">
-              Get access to your Orders, Recommendations and more
+        {/* LEFT PANEL: The "Vibe" Panel */}
+        <div className="hidden md:flex flex-col w-[40%] bg-genz-ink p-10 text-white justify-between relative overflow-hidden">
+          <div className="relative z-10 space-y-4">
+            <h2 className="text-4xl font-black uppercase tracking-tighter">Login</h2>
+            <p className="text-lg font-medium opacity-70 leading-tight">
+              Get access to your Orders, Recommendations and more.
             </p>
           </div>
-          <div className="flex justify-center">
-             {/* Removed opacity-40 to fix the fade issue */}
-             <img src="/authillustration.png" alt="Login Illustration" className="w-48 object-contain" />
+          
+          {/* Abstract Design Element */}
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-genz-accent rounded-full blur-3xl opacity-20" />
+          
+          <div className="relative z-10 flex justify-center">
+             <img src="/authillustration.png" alt="Illustration" className="w-52 object-contain" />
           </div>
         </div>
 
-        {/* RIGHT PANEL: Form */}
-        <div className="flex-1 p-10 flex flex-col justify-between bg-white">
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-amazon-darkBlue transition-colors">
+        {/* RIGHT PANEL: The Action Panel */}
+        <div className="flex-1 p-10 flex flex-col bg-white">
+          <button onClick={onClose} className="self-end text-genz-muted hover:text-genz-ink transition-colors">
             <HiXMark size={28} />
           </button>
 
-          <div className="space-y-6 mt-4">
+          <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
             {step === "identifier" && (
               <div className="space-y-8">
-                <div className="relative border-b-2 border-gray-200 focus-within:border-amazon-orange transition-colors">
+                <div className="relative group">
                    <input 
                      type="text"
                      autoFocus
                      value={identifier}
                      onChange={(e) => setIdentifier(e.target.value)}
-                     className="w-full py-2 outline-none text-lg peer placeholder-transparent"
-                     placeholder="Enter Email/Mobile number"
+                     className="w-full py-3 border-b-2 border-genz-border outline-none text-lg font-bold text-genz-ink focus:border-genz-accent transition-all peer placeholder-transparent"
+                     placeholder="Email/Mobile"
                      id="identifier"
                    />
-                   <label htmlFor="identifier" className="absolute left-0 -top-5 text-gray-400 text-xs transition-all peer-placeholder-shown:text-lg peer-placeholder-shown:top-2 peer-focus:-top-5 peer-focus:text-xs peer-focus:text-amazon-orange">
-                     Enter Email/Mobile number
+                   <label 
+                     htmlFor="identifier" 
+                     className="absolute left-0 -top-4 text-genz-muted text-[10px] font-black uppercase tracking-widest transition-all 
+                                peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-placeholder-shown:font-medium
+                                peer-focus:-top-4 peer-focus:text-[10px] peer-focus:text-genz-accent peer-focus:font-black"
+                   >
+                     Enter Email / Mobile
                    </label>
                 </div>
-                <p className="text-[11px] text-gray-500 leading-relaxed font-medium">
-                  By continuing, you agree to ShopyBucks's <span className="text-amazon-orange font-bold cursor-pointer">Terms of Use</span> and <span className="text-amazon-orange font-bold cursor-pointer">Privacy Policy</span>.
+
+                <p className="text-[10px] text-genz-muted leading-relaxed font-bold uppercase tracking-tight">
+                  By continuing, you agree to our <span className="text-genz-accent cursor-pointer">Terms</span> and <span className="text-genz-accent cursor-pointer">Privacy Policy</span>.
                 </p>
+
                 <button 
                   onClick={handleIdentifierSubmit}
                   disabled={loading || identifier.length < 3}
-                  className="w-full bg-amazon-orange hover:bg-amazon-orangeHover text-amazon-darkBlue py-4 font-black shadow-lg transition-all active:scale-[0.98] disabled:bg-gray-200 disabled:text-gray-400"
+                  className="w-full bg-genz-accent text-white py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-xl shadow-orange-500/20 transition-all active:scale-[0.95] disabled:bg-genz-border disabled:text-genz-muted"
                 >
-                  {loading ? "Processing..." : identifier.includes("@") ? "CONTINUE" : "REQUEST OTP"}
+                  {loading ? "Processing..." : identifier.includes("@") ? "CONTINUE" : "PROCEED TO OTP"}
                 </button>
               </div>
             )}
 
             {step === "password" && (
-              <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <p className="text-sm font-bold text-gray-600 uppercase tracking-tighter">Password for {identifier}</p>
+              <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-genz-accent uppercase tracking-widest">Security Check</p>
+                  <h3 className="text-xl font-black text-genz-ink tracking-tight uppercase">Password for {identifier.split('@')[0]}</h3>
+                </div>
                 <Input 
-                  placeholder="Enter Password" 
+                  placeholder="Your Password" 
                   type="password" 
                   value={password} 
                   onChange={setPassword} 
                 />
-                <PrimaryButton loading={loading} onClick={handleFinalLogin}>LOGIN</PrimaryButton>
-                <button onClick={() => setStep("identifier")} className="text-xs font-black text-amazon-orange uppercase tracking-tighter">Change Email?</button>
+                <PrimaryButton loading={loading} onClick={handleFinalLogin}>SECURE LOGIN</PrimaryButton>
+                <button onClick={() => setStep("identifier")} className="text-[10px] font-black text-genz-muted hover:text-genz-accent uppercase tracking-widest">Back to Start</button>
               </div>
             )}
 
             {step === "otp" && (
-              <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                <p className="text-sm font-bold text-gray-600 uppercase tracking-tighter text-center">OTP sent to {identifier}</p>
+              <div className="space-y-6 animate-in slide-in-from-right-8 duration-500 text-center">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-genz-accent uppercase tracking-widest">Verify Identity</p>
+                  <h3 className="text-xl font-black text-genz-ink tracking-tight uppercase">Enter OTP sent to {identifier}</h3>
+                </div>
                 <Input 
-                  placeholder="Enter 6-digit OTP" 
+                  placeholder="000000" 
                   type="number" 
                   value={otp} 
                   onChange={setOtp} 
                 />
                 <PrimaryButton loading={loading} onClick={handleFinalLogin}>VERIFY & LOGIN</PrimaryButton>
-                <button onClick={() => setStep("identifier")} className="text-xs font-black text-amazon-orange uppercase tracking-tighter">Change Phone Number?</button>
+                <button onClick={() => setStep("identifier")} className="text-[10px] font-black text-genz-muted hover:text-genz-accent uppercase tracking-widest">Wrong Number?</button>
               </div>
             )}
           </div>
 
-          <div className="text-center pt-4">
-            <button className="text-amazon-orange font-black text-xs uppercase tracking-widest hover:underline">
-               New to ShopyBucks? Create an account
+          <div className="mt-8 text-center border-t border-genz-border pt-6">
+            <button 
+              onClick={() => { onClose(); openRegister(); }}
+              className="text-genz-accent font-black text-[10px] uppercase tracking-widest hover:underline"
+            >
+              New to the platform? Join now
             </button>
           </div>
         </div>
