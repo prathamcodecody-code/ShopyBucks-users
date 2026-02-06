@@ -14,7 +14,7 @@ import { useAuthModal } from "@/app/auth/AuthModalContext";
 export default function NavbarClient({ categories }: { categories: any[] }) {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { openAuthModal } = useAuthModal(); // ADD THIS LINE - destructure openAuthModal
+  const { openLogin, openRegister } = useAuthModal(); // ADD THIS LINE - destructure openAuthModal
   const [query, setQuery] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -28,7 +28,8 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
   const openAuth = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openAuthModal(); // Now this will work
+    openRegister();
+    openLogin(); // Now this will work
     setShowProfileMenu(false);
   };
 
@@ -91,7 +92,7 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
                       <div className="p-4 border-b flex justify-between items-center">
                         <span className="font-medium text-gray-600 italic">New customer?</span>
                         <button 
-                          onClick={(e) => openAuth(e)} 
+                          onClick={openLogin} 
                           className="text-[#2874f0] font-black uppercase tracking-tighter hover:underline"
                         >
                           Sign Up
