@@ -46,6 +46,9 @@ export default function ProductClient({ product }: any) {
      DERIVED VALUES - CRITICAL LOGIC
   ----------------------------------------- */
   
+  // Product sizes array
+  const productSizes = Array.isArray(product.productsize) ? product.productsize : [];
+  
   // Determine if product has color variants
   const hasColorVariants = product.hasVariants && 
     Array.isArray(product.variants) && 
@@ -238,11 +241,12 @@ export default function ProductClient({ product }: any) {
               productId={product.id}
               stock={activeStock}
               sizeId={selectedSize?.id}
+              variantId={activeVariant?.id}
+              hasVariants={hasColorVariants}
+              hasSizes={productSizes.length > 0}
               disabled={
-                // Require size selection if ANY sizes exist
-                (hasColorVariants || (product.productsize?.length > 0))
-                  ? !selectedSize
-                  : activeStock <= 0
+                // Disable if product has variants/sizes but none selected
+                (hasColorVariants || productSizes.length > 0) && !selectedSize
               }
             />
           </div>
