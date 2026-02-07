@@ -45,13 +45,16 @@ export default function CartPage() {
     if (qty < 1) return;
 
     setUpdatingId(id);
-    await api.put(`/cart/${id}`, { quantity: qty });
-
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity: qty } : i))
-    );
-
-    setUpdatingId(null);
+    try {
+      await api.put(`/cart/${id}`, { quantity: qty });
+      setItems((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, quantity: qty } : i))
+      );
+    } catch (error) {
+      console.error("Failed to update quantity:", error);
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   /* ---------------- AUTH REQUIRED ---------------- */
@@ -121,11 +124,42 @@ export default function CartPage() {
     );
   }
 
-  /* ---------------- TOTALS ---------------- */
-  const subtotal = items.reduce(
-    (sum, i) => sum + i.product.price * i.quantity,
-    0
-  );
+  /* ---------------- TOTALS (VARIANT-AWARE) ---------------- */
+  const calculateItemPrice = (item: any) => {
+    // Get base price from variant → productsize → product
+    let basePrice = item.variant
+      ? Number(item.variant.price)
+      : item.productsize?.price
+      ? Number(item.productsize.price)
+      : Number(item.product.price);
+
+    // Apply discount if exists
+    if (item.product.discountType === "PERCENT" && item.product.discountValue) {
+      basePrice = Math.round(
+        basePrice - (basePrice * item.product.discountValue) / 100
+      );
+    }
+
+    if (item.product.discountType === "FLAT" && item.product.discountValue) {
+      basePrice = basePrice - item.product.discountValue;
+    }
+
+    return basePrice * item.quantity;
+  };
+
+  const calculateItemOriginalPrice = (item: any) => {
+    const basePrice = item.variant
+      ? Number(item.variant.price)
+      : item.productsize?.price
+      ? Number(item.productsize.price)
+      : Number(item.product.price);
+
+    return basePrice * item.quantity;
+  };
+
+  const subtotal = items.reduce((sum, item) => sum + calculateItemOriginalPrice(item), 0);
+  const total = items.reduce((sum, item) => sum + calculateItemPrice(item), 0);
+  const savings = subtotal - total;
 
   return (
     <div className="bg-amazon-lightGray min-h-screen">
@@ -140,7 +174,10 @@ export default function CartPage() {
           {/* LEFT ITEMS */}
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => (
-              <div key={item.id} className={updatingId === item.id ? "opacity-50 pointer-events-none transition-opacity" : ""}>
+              <div 
+                key={item.id} 
+                className={updatingId === item.id ? "opacity-50 pointer-events-none transition-opacity" : ""}
+              >
                 <CartItemCard
                   item={item}
                   onIncrease={() => updateQty(item.id, item.quantity + 1)}
@@ -163,6 +200,14 @@ export default function CartPage() {
                   <span>Price ({items.length} items)</span>
                   <span>₹{subtotal.toLocaleString()}</span>
                 </div>
+
+                {savings > 0 && (
+                  <div className="flex justify-between text-amazon-success">
+                    <span>Discount</span>
+                    <span>-₹{savings.toLocaleString()}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-amazon-mutedText">
                   <span>Delivery Charges</span>
                   <span className="text-amazon-success">FREE</span>
@@ -171,11 +216,13 @@ export default function CartPage() {
                 <div className="pt-4 border-t border-gray-100">
                   <div className="flex justify-between items-end">
                     <span className="text-base font-black text-amazon-text">Total Amount</span>
-                    <span className="text-2xl font-black text-amazon-text">₹{subtotal.toLocaleString()}</span>
+                    <span className="text-2xl font-black text-amazon-text">₹{total.toLocaleString()}</span>
                   </div>
-                  <p className="text-[10px] text-amazon-success font-bold mt-1 uppercase tracking-tight">
-                    You are saving ₹0 on this order
-                  </p>
+                  {savings > 0 && (
+                    <p className="text-[10px] text-amazon-success font-bold mt-1 uppercase tracking-tight">
+                      You are saving ₹{savings.toLocaleString()} on this order
+                    </p>
+                  )}
                 </div>
               </div>
 
