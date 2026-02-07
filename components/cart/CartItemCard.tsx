@@ -12,9 +12,19 @@ type CartItem = {
     discountValue?: number | null;
   };
   quantity: number;
-  size?: {
+  productsize?: {
     id: number;
     size: string;
+    price?: number | null;
+  } | null;
+  variant?: {
+    id: number;
+    color: string;
+    size?: string | null;
+    price: string | number;
+    img1?: string | null;
+    img2?: string | null;
+    img3?: string | null;
   } | null;
 };
 
@@ -29,20 +39,39 @@ export default function CartItemCard({
   onDecrease: () => void;
   onRemove: () => void;
 }) {
-  const price = Number(item.product.price);
+  // ========================================
+  // DETERMINE DISPLAY VALUES BASED ON VARIANT
+  // ========================================
+  
+  // Image Priority: variant img → product img
+  const displayImage = item.variant?.img1 || item.product.img1;
 
-  let finalPrice = price;
+  // Price Priority: variant price → productsize price → product price
+  const basePrice = item.variant 
+    ? Number(item.variant.price)
+    : item.productsize?.price 
+    ? Number(item.productsize.price)
+    : Number(item.product.price);
+
+  // Size: variant size → productsize size
+  const displaySize = item.variant?.size || item.productsize?.size;
+
+  // Color: only from variant
+  const displayColor = item.variant?.color;
+
+  // Calculate final price with discount
+  let finalPrice = basePrice;
   let discountLabel = "";
 
   if (item.product.discountType === "PERCENT" && item.product.discountValue) {
     finalPrice = Math.round(
-      price - (price * item.product.discountValue) / 100
+      basePrice - (basePrice * item.product.discountValue) / 100
     );
     discountLabel = `${item.product.discountValue}% OFF`;
   }
 
   if (item.product.discountType === "FLAT" && item.product.discountValue) {
-    finalPrice = price - item.product.discountValue;
+    finalPrice = basePrice - item.product.discountValue;
     discountLabel = `₹${item.product.discountValue} OFF`;
   }
 
@@ -51,11 +80,17 @@ export default function CartItemCard({
       
       {/* IMAGE SECTION */}
       <div className="relative w-28 h-36 bg-amazon-lightGray rounded-xl overflow-hidden shrink-0 border border-gray-100">
-        <img
-          src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/products/${item.product.img1}`}
-          alt={item.product.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
+        {displayImage ? (
+          <img
+            src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/products/${displayImage}`}
+            alt={item.product.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-400">
+            No Image
+          </div>
+        )}
       </div>
 
       {/* DETAILS SECTION */}
@@ -78,12 +113,20 @@ export default function CartItemCard({
             Sold by <span className="text-amazon-darkBlue font-semibold">ShopyBucks Partner</span>
           </p>
 
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {/* COLOR BADGE (only for variants) */}
+            {displayColor && (
+              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-md">
+                <span className="text-[10px] font-bold text-amazon-mutedText uppercase tracking-wider">Color:</span>
+                <span className="text-xs font-black text-amazon-darkBlue">{displayColor}</span>
+              </div>
+            )}
+
             {/* SIZE BADGE */}
-            {item.size && (
+            {displaySize && (
               <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-md">
                 <span className="text-[10px] font-bold text-amazon-mutedText uppercase tracking-wider">Size:</span>
-                <span className="text-xs font-black text-amazon-darkBlue">{item.size.size}</span>
+                <span className="text-xs font-black text-amazon-darkBlue">{displaySize}</span>
               </div>
             )}
 
@@ -115,10 +158,10 @@ export default function CartItemCard({
               <span className="text-xl font-black text-amazon-text tracking-tight">
                 ₹{(finalPrice * item.quantity).toLocaleString()}
               </span>
-              {finalPrice < price && (
+              {finalPrice < basePrice && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm line-through text-amazon-mutedText">
-                    ₹{(price * item.quantity).toLocaleString()}
+                    ₹{(basePrice * item.quantity).toLocaleString()}
                   </span>
                   <span className="text-xs font-bold text-amazon-success bg-green-50 px-1.5 py-0.5 rounded">
                     {discountLabel}
