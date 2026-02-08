@@ -50,11 +50,11 @@ export default function MegaMenu({ categoryId }: { categoryId: number }) {
   }, [categoryId]);
 
   return (
-    <div className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-gray-100 p-10 w-full max-w-[1244px] rounded-b-xl animate-in fade-in slide-in-from-top-1 duration-300">
+    <div className="bg-white shadow-[0_40px_80px_rgba(0,0,0,0.15)] border border-genz-border p-10 w-full max-w-[1244px] rounded-b-genz animate-in fade-in slide-in-from-top-2 duration-300 z-[100] relative">
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
           <div className="w-8 h-8 border-4 border-amazon-orange border-t-transparent rounded-full animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-amazon-mutedText">Loading Collections</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-genz-muted">Loading Collections</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-y-12 gap-x-8">
