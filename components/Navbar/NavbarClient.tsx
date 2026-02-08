@@ -140,33 +140,50 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
       </div>
 
       {/* SECTION 2: CATEGORY BAR (NAME ONLY) */}
-      <div className="hidden md:block bg-white border-b border-gray-100 shadow-sm relative">
-        <div className="max-w-[1244px] mx-auto px-4 flex items-center justify-center gap-10 lg:gap-16">
-          {categories.map((c) => (
-            <div 
-              key={c.id} 
-              onMouseEnter={() => setActiveCategory(c.id)}
-              onMouseLeave={() => setActiveCategory(null)}
-              className="relative py-4 group cursor-pointer"
-            >
-              <Link 
-                href={`/all-products?categoryId=${c.id}`}
-                className="text-[13px] font-black text-gray-700 uppercase tracking-tight flex items-center gap-1 group-hover:text-amazon-orange transition-colors"
-              >
-                {c.name}
-                <FiChevronDown className={`transition-transform duration-200 ${activeCategory === c.id ? 'rotate-180' : ''}`} />
-              </Link>
+     <div className="hidden md:block bg-white border-b border-genz-border shadow-sm relative">
+  <div className="max-w-7xl mx-auto px-4 md:px-8">
+    {/* SCROLLABLE CONTAINER */}
+    <div className="flex items-center gap-8 lg:gap-12 overflow-x-auto no-scrollbar py-4">
+      {categories.map((c) => (
+        <div 
+          key={c.id} 
+          onMouseEnter={() => setActiveCategory(c.id)}
+          onMouseLeave={() => setActiveCategory(null)}
+          /* Added flex-shrink-0 and whitespace-nowrap to prevent text wrapping */
+          className="relative group cursor-pointer flex-shrink-0 whitespace-nowrap"
+        >
+          <Link 
+            href={`/all-products?categoryId=${c.id}`}
+            className="text-[13px] font-black text-genz-ink uppercase tracking-tight flex items-center gap-1 group-hover:text-genz-accent transition-colors"
+          >
+            {c.name}
+            <FiChevronDown className={`transition-transform duration-200 ${activeCategory === c.id ? 'rotate-180' : ''}`} />
+          </Link>
 
-              {/* MegaMenu anchored strictly below the text */}
-              {activeCategory === c.id && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 z-50 pt-0 w-max">
-                  <MegaMenu categoryId={c.id} />
-                </div>
-              )}
+          {/* MegaMenu anchored strictly below the text */}
+          {activeCategory === c.id && (
+            /* Changed from left-1/2 -translate-x-1/2 to left-0 
+               to ensure menu opens properly in a scrollable container */
+            <div className="absolute top-full left-0 z-50 pt-0 w-max">
+              <MegaMenu categoryId={c.id} />
             </div>
-          ))}
+          )}
         </div>
-      </div>
+      ))}
+    </div>
+  </div>
+
+  {/* CSS to hide scrollbar while keeping functionality */}
+  <style jsx global>{`
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  `}</style>
+</div>
 
       {/* MOBILE MENU */}
       {isMobileMenuOpen && (
