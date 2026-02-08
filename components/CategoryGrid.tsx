@@ -4,29 +4,22 @@ import Link from "next/link";
 
 export default function CategoryGrid() {
   const categories = [
-    { title: "Women", image: "/categories/women.jpg" },
-    { title: "Men", image: "/categories/men.jpg" },
-    { title: "Kids", image: "/categories/kids.jpg" },
-    { title: "Sports", image: "/categories/sports.png" },
-    { title: "Beauty", image: "/categories/beauty.png" },
-    { title: "Electronics", image: "/categories/electronics.png" },
-    // Adding more will now just extend the scrollable row
+   { id: 2, title: "Women", image: "/categories/women.jpg" },
+    { id: 1, title: "Men", image: "/categories/men.jpg" },
+    { id: 7, title: "Kids", image: "/categories/kids.jpg" },
+    { id: 4, title: "Sports", image: "/categories/sports.png" },
+    { id: 3, title: "Beauty", image: "/categories/beauty.png" },
+    { id: 9, title: "Electronics", image: "/categories/electronics.png" },
   ];
 
   return (
     <section className="bg-genz-bg py-8 md:py-12 px-4 sm:px-6 md:px-8">
       <div className="max-w-7xl mx-auto">
-        
-        {/* SCROLLABLE CONTAINER: 
-            1. overflow-x-auto allows horizontal scrolling.
-            2. flex-nowrap keeps everything in a single line.
-            3. scrollbar-hide (optional) keeps the minimal look.
-        */}
-        <div className="flex flex-nowrap overflow-x-auto gap-8 md:gap-14 lg:gap-20 pb-6 no-scrollbar snap-x scroll-smooth">
+          <div className="flex flex-nowrap overflow-x-auto gap-8 md:gap-14 lg:gap-20 pb-6 no-scrollbar snap-x scroll-smooth">
           {categories.map((c) => (
             <Link
               key={c.title}
-              href={`/all-products?category=${c.title}`}
+              href={`/all-products?categoryId=${c.id}`}
               className="flex flex-col items-center group cursor-pointer flex-shrink-0 snap-center"
             >
               {/* CIRCULAR IMAGE */}
@@ -64,3 +57,4 @@ export default function CategoryGrid() {
     </section>
   );
 }
+
