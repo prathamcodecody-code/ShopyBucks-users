@@ -11,23 +11,32 @@ type PageProps = {
 };
 
 export default async function ProductPage({ params }: PageProps) {
-  const { category, slug } = await params; // ✅ FIX
+  // ✅ MUST await params
+  const { category, slug } = await params;
 
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/products/slug/${slug}`,
-    { cache: "no-store" }
-  );
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/products/slug/${slug}`;
 
-  if (!res.ok) return notFound();
+  try {
+    const res = await fetch(apiUrl, {
+      cache: "no-store",
+    });
 
-  const product = await res.json();
+    if (!res.ok) {
+      return notFound();
+    }
 
-  if (
-    !product?.category?.name ||
-    product.category.name.toLowerCase() !== category.toLowerCase()
-  ) {
+    const product = await res.json();
+
+    // ✅ SLUG ↔ SLUG comparison (CORRECT)
+    if (
+      !product?.category?.slug ||
+      product.category.slug !== category
+    ) {
+      return notFound();
+    }
+
+    return <ProductClient product={product} />;
+  } catch (err) {
     return notFound();
   }
-
-  return <ProductClient product={product} />;
 }
