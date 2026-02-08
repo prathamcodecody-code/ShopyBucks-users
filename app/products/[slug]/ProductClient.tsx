@@ -11,12 +11,11 @@ import { Star } from "lucide-react";
 
 export default function ProductClient({ product }: any) {
   /* -----------------------------------------
-     STATE
+      STATE
   ----------------------------------------- */
   const [selectedSize, setSelectedSize] = useState<any | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
-  // Auto-select baseColor on mount if it exists
   useEffect(() => {
     if (product.hasVariants && product.baseColor && !selectedColor) {
       setSelectedColor(product.baseColor);
@@ -24,14 +23,13 @@ export default function ProductClient({ product }: any) {
   }, [product.hasVariants, product.baseColor, selectedColor]);
 
   /* -----------------------------------------
-     REVIEWS
+      REVIEWS
   ----------------------------------------- */
   const [reviews, setReviews] = useState<any[]>([]);
   const [avg, setAvg] = useState<number | null>(null);
 
   useEffect(() => {
-    api
-      .get(`/reviews/product/${product.id}`)
+    api.get(`/reviews/product/${product.id}`)
       .then(res => {
         setReviews(res.data.reviews || []);
         setAvg(res.data.averageRating);
@@ -43,200 +41,128 @@ export default function ProductClient({ product }: any) {
   }, [product.id]);
 
   /* -----------------------------------------
-     DERIVED VALUES - CRITICAL LOGIC
+      DERIVED VALUES
   ----------------------------------------- */
-  
-  // Product sizes array
   const productSizes = Array.isArray(product.productsize) ? product.productsize : [];
-  
-  // Determine if product has color variants
-  const hasColorVariants = product.hasVariants && 
-    Array.isArray(product.variants) && 
-    product.variants.length > 0;
+  const hasColorVariants = product.hasVariants && Array.isArray(product.variants) && product.variants.length > 0;
 
-  // Get the active variant based on selected color/size
   const activeVariant = useMemo(() => {
-    if (!hasColorVariants) return null;
-    if (!selectedColor) return null;
-    
-    // If baseColor is selected, no variant is active (use main product)
-    if (selectedColor === product.baseColor) return null;
-
-    // If size is selected, return that specific variant
+    if (!hasColorVariants || !selectedColor || selectedColor === product.baseColor) return null;
     if (selectedSize) return selectedSize;
-
-    // Otherwise return first variant matching the color
     return product.variants.find((v: any) => v.color === selectedColor) || null;
   }, [hasColorVariants, selectedColor, selectedSize, product.variants, product.baseColor]);
 
-  // Get active images
   const activeImages = useMemo(() => {
-    if (activeVariant?.img1 || activeVariant?.img2 || activeVariant?.img3) {
-      return [
-        activeVariant.img1,
-        activeVariant.img2,
-        activeVariant.img3,
-      ].filter(Boolean);
-    }
-
-    return [
-      product.img1,
-      product.img2,
-      product.img3,
-      product.img4,
-    ].filter(Boolean);
+    const variantImages = [activeVariant?.img1, activeVariant?.img2, activeVariant?.img3].filter(Boolean);
+    if (variantImages.length > 0) return variantImages;
+    return [product.img1, product.img2, product.img3, product.img4].filter(Boolean);
   }, [activeVariant, product]);
 
-  // Get active price - FIXED LOGIC
   const activePrice = useMemo(() => {
-    // Priority 1: Selected size from non-variant product
-    if (!hasColorVariants && selectedSize?.price) {
-      return Number(selectedSize.price);
-    }
-
-    // Priority 2: Selected variant
-    if (activeVariant?.price) {
-      return Number(activeVariant.price);
-    }
-
-    // Priority 3: Selected size price (even if null)
-    if (selectedSize?.price !== undefined && selectedSize?.price !== null) {
-      return Number(selectedSize.price);
-    }
-
-    // Priority 4: Product final price or base price
+    if (!hasColorVariants && selectedSize?.price) return Number(selectedSize.price);
+    if (activeVariant?.price) return Number(activeVariant.price);
+    if (selectedSize?.price != null) return Number(selectedSize.price);
     return Number(product.finalPrice ?? product.price);
   }, [selectedSize, activeVariant, hasColorVariants, product]);
 
-  // Get active stock - FIXED LOGIC
   const activeStock = useMemo(() => {
-    // Priority 1: Selected size stock
-    if (selectedSize?.stock !== undefined) {
-      return Number(selectedSize.stock);
-    }
-
-    // Priority 2: Active variant stock
-    if (activeVariant?.stock !== undefined) {
-      return Number(activeVariant.stock);
-    }
-
-    // Priority 3: Product base stock
+    if (selectedSize?.stock !== undefined) return Number(selectedSize.stock);
+    if (activeVariant?.stock !== undefined) return Number(activeVariant.stock);
     return Number(product.stock ?? 0);
   }, [selectedSize, activeVariant, product.stock]);
 
   const isOutOfStock = activeStock <= 0;
 
-  /* -----------------------------------------
-     PRICING DISPLAY
-  ----------------------------------------- */
-  const pricing = product.pricing || {
-    mrp: Number(product.price) || 0,
-    sellingPrice: Number(product.price) || 0,
-    discountPercent: 0,
-    discountAmount: 0,
-  };
-
-  // Calculate MRP based on active price
+  const pricing = product.pricing || { mrp: Number(product.price) || 0, discountPercent: 0 };
   const displayMRP = useMemo(() => {
     if (!hasColorVariants && selectedSize?.price) {
-      // For non-variant products with size-specific prices
       const sizePrice = Number(selectedSize.price);
-      if (pricing.discountPercent > 0) {
-        return Math.round(sizePrice / (1 - pricing.discountPercent / 100));
-      }
-      return sizePrice;
+      return pricing.discountPercent > 0 ? Math.round(sizePrice / (1 - pricing.discountPercent / 100)) : sizePrice;
     }
     return pricing.mrp;
   }, [hasColorVariants, selectedSize, pricing]);
 
-  const { discountPercent } = pricing;
-
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-16">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-        {/* IMAGES */}
-        <div className="sticky top-24">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 lg:py-12">
+      {/* REFINED GRID: 
+          Changed gap to 16 for better breathing room and adjusted column ratio
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+        
+        {/* IMAGES: Taking up 5/12 columns to make images smaller and more focused */}
+        <div className="lg:col-span-5 sticky top-24">
           <ProductImages images={activeImages} />
         </div>
 
-        {/* DETAILS */}
-        <div className="flex flex-col space-y-6">
-          {/* HEADER */}
-          <div className="space-y-2">
-            <p className="text-sm font-bold uppercase tracking-widest text-brandPink">
+        {/* DETAILS: Taking up 7/12 columns */}
+        <div className="lg:col-span-7 flex flex-col space-y-6">
+          <div className="space-y-3">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-genz-accent">
               {product.category?.name}
             </p>
 
-            <h1 className="text-3xl md:text-5xl font-extrabold">
+            {/* REDUCED TITLE SIZE: Changed from 5xl to 3xl for better hierarchy */}
+            <h1 className="text-2xl md:text-3xl font-black text-genz-ink leading-tight uppercase tracking-tighter">
               {product.title}
             </h1>
 
-            {avg && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center bg-green-100 text-green-700 px-2 py-0.5 rounded text-sm font-bold">
-                  {avg} <Star size={14} className="ml-1 fill-current" />
+            {/* HIDE RATINGS IF 0: Uses logical AND to check for existence and non-zero value */}
+            {avg !== null && avg > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
+                  {avg} <Star size={12} className="ml-1 fill-genz-accent text-genz-accent" />
                 </div>
-                <span className="text-sm text-gray-400">
+                <span className="text-xs font-bold text-genz-muted uppercase tracking-widest">
                   {reviews.length} Ratings
                 </span>
               </div>
             )}
           </div>
 
-          {/* PRICE - ALWAYS VISIBLE */}
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex items-baseline gap-4">
-              <span className="text-4xl font-bold">₹{activePrice}</span>
-
-              {discountPercent > 0 && (
+              <span className="text-4xl font-black text-genz-ink tracking-tighter">₹{activePrice}</span>
+              {pricing.discountPercent > 0 && (
                 <>
-                  <span className="text-xl line-through text-gray-400">
+                  <span className="text-xl line-through text-genz-muted opacity-50 font-bold">
                     ₹{displayMRP}
                   </span>
-                  <span className="text-xl font-bold text-green-600">
-                    {discountPercent}% OFF
+                  <span className="text-xl font-black text-genz-accent">
+                    {pricing.discountPercent}% OFF
                   </span>
                 </>
               )}
             </div>
-
-            {discountPercent > 0 && (
-              <span className="text-sm text-green-600 font-bold">
+            {pricing.discountPercent > 0 && (
+              <p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
                 You save ₹{Math.round(displayMRP - activePrice)}
-              </span>
+              </p>
             )}
           </div>
 
-          {/* STOCK */}
           <div>
-            {isOutOfStock ? (
-              <span className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-bold">
-                Out of Stock
-              </span>
-            ) : (
-              <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold">
-                In Stock · {activeStock} left
-              </span>
-            )}
+            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+              isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+            }`}>
+              {isOutOfStock ? "Out of Stock" : `In Stock · ${activeStock} left`}
+            </span>
           </div>
 
-          {/* VARIANT/SIZE SELECTOR - ALWAYS SHOW IF SIZES/VARIANTS EXIST */}
-          <ProductVariantSelector
-            product={product}
-            selectedColor={selectedColor}
-            selectedSizeId={selectedSize?.id ?? null}
-            baseUrl={`${process.env.NEXT_PUBLIC_API_URL}/uploads/products/`}
-            onColorChange={(color) => {
-              setSelectedColor(color);
-              setSelectedSize(null); // reset size on color change
-            }}
-            onSizeChange={(size) => {
-              setSelectedSize(size);
-            }}
-          />
+          <div className="py-4 border-y border-genz-border">
+            <ProductVariantSelector
+              product={product}
+              selectedColor={selectedColor}
+              selectedSizeId={selectedSize?.id ?? null}
+              baseUrl={`${process.env.NEXT_PUBLIC_API_URL}/uploads/products/`}
+              onColorChange={(color) => {
+                setSelectedColor(color);
+                setSelectedSize(null);
+              }}
+              onSizeChange={setSelectedSize}
+            />
+          </div>
 
-          {/* ADD TO CART */}
-          <div className="pt-4">
+          <div className="pt-2">
             <AddToCartButton
               productId={product.id}
               stock={activeStock}
@@ -244,100 +170,48 @@ export default function ProductClient({ product }: any) {
               variantId={activeVariant?.id}
               hasVariants={hasColorVariants}
               hasSizes={productSizes.length > 0}
-              disabled={
-                // Disable if product has variants/sizes but none selected
-                (hasColorVariants || productSizes.length > 0) && !selectedSize
-              }
+              disabled={(hasColorVariants || productSizes.length > 0) && !selectedSize}
             />
           </div>
 
-          {/* PRODUCT DETAILS */}
-          <div className="pt-8 border-t">
-            <h3 className="text-sm font-bold uppercase mb-3">
-              Product Details
-            </h3>
-
-            <div className="grid grid-cols-2 gap-y-3 text-sm">
-              <div className="text-gray-500">Category</div>
-              <div>{product.category?.name}</div>
-
-              <div className="text-gray-500">Weight</div>
-              <div>{product.weight} g</div>
-
-              {activeVariant?.color && (
-                <>
-                  <div className="text-gray-500">Color</div>
-                  <div>{activeVariant.color}</div>
-                </>
-              )}
-
-              {selectedSize?.size && (
-                <>
-                  <div className="text-gray-500">Size</div>
-                  <div>{selectedSize.size}</div>
-                </>
-              )}
-
-              {product.seasonTags?.length > 0 && (
-                <>
-                  <div className="text-gray-500">Season</div>
-                  <div>{product.seasonTags.join(", ")}</div>
-                </>
-              )}
-
-              {product.occasionTags?.length > 0 && (
-                <>
-                  <div className="text-gray-500">Occasion</div>
-                  <div>{product.occasionTags.join(", ")}</div>
-                </>
-              )}
+          {/* BENTO STYLE PRODUCT DETAILS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+            <div className="p-4 bg-genz-bg rounded-genz border border-genz-border">
+              <h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">Specs</h3>
+              <div className="space-y-2 text-xs font-bold uppercase">
+                <div className="flex justify-between"><span>Weight</span><span className="text-genz-muted">{product.weight}g</span></div>
+                <div className="flex justify-between"><span>Category</span><span className="text-genz-muted">{product.category?.name}</span></div>
+                {activeVariant?.color && <div className="flex justify-between"><span>Color</span><span className="text-genz-muted">{activeVariant.color}</span></div>}
+              </div>
             </div>
-          </div>
-
-          {/* DESCRIPTION */}
-          <div className="pt-6 border-t">
-            <h3 className="text-sm font-bold uppercase mb-2">
-              Description
-            </h3>
-            <p className="text-gray-600 leading-relaxed">
-              {product.description || "No description available."}
-            </p>
+            <div className="p-4 bg-genz-bg rounded-genz border border-genz-border">
+              <h3 className="text-[10px] font-black uppercase tracking-widest mb-2 text-genz-muted">Description</h3>
+              <p className="text-xs text-genz-muted font-medium leading-relaxed line-clamp-4">
+                {product.description || "Minimalist style for the modern wardrobe."}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* REVIEWS */}
-      {reviews.length > 0 && (
-        <div className="mt-20 pt-16 border-t">
-          <h2 className="text-2xl font-bold mb-8">
-            Customer Reviews
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {reviews.map((r) => (
-              <div key={r.id} className="bg-gray-50 p-6 rounded-xl border">
-                <div className="flex justify-between">
-                  <p className="font-bold">
-                    {r.user?.name || "Verified Buyer"}
-                  </p>
-                  <span className="text-green-700 font-bold">
-                    {r.rating} ★
-                  </span>
-                </div>
-
-                {r.comment && (
-                  <p className="mt-2 text-gray-600 italic">
-                    "{r.comment}"
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* RECOMMENDATIONS */}
+      {/* REVIEWS & RECOMMENDATIONS */}
       <div className="mt-24 space-y-16">
+        {reviews.length > 0 && (
+          <div className="pt-16 border-t border-genz-border">
+            <h2 className="text-2xl font-black uppercase tracking-tighter mb-8">Customer Feedback</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reviews.map((r) => (
+                <div key={r.id} className="bg-white p-6 rounded-genz border border-genz-border shadow-sm">
+                  <div className="flex justify-between mb-4">
+                    <p className="font-black text-xs uppercase tracking-widest">{r.user?.name || "Verified Buyer"}</p>
+                    <span className="text-genz-accent font-black text-xs">{r.rating} ★</span>
+                  </div>
+                  {r.comment && <p className="text-sm text-genz-muted font-medium italic">"{r.comment}"</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <TrendingNow />
         <NewArrivals />
       </div>
