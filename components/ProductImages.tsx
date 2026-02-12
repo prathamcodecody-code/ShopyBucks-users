@@ -6,7 +6,23 @@ export default function ProductImages({ images = [] }: { images?: string[] }) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
   const base = `${API_URL}/uploads/products/`;
 
-  // ✅ Memoize to avoid new array on every render
+  // ✅ Helper to build correct image URL
+  const buildImageUrl = (img: string) => {
+    // If already a full URL (starts with http:// or https://), return as-is
+    if (img.startsWith("http://") || img.startsWith("https://")) {
+      return img;
+    }
+    
+    // If already starts with the base path, return as-is
+    if (img.startsWith("/uploads/products/")) {
+      return API_URL + img;
+    }
+    
+    // Otherwise, it's just a filename - prepend base
+    return base + img;
+  };
+
+  // ✅ Memoize valid images
   const validImages = useMemo(
     () =>
       Array.isArray(images)
@@ -47,7 +63,7 @@ export default function ProductImages({ images = [] }: { images?: string[] }) {
       <div className="flex md:flex-col gap-3 md:w-24">
         {validImages.map((img, index) => (
           <button
-            key={`${img}-${index}`} // ✅ stable key
+            key={`${img}-${index}`}
             onClick={() => {
               if (img !== selected) {
                 setSelected(img);
@@ -64,7 +80,7 @@ export default function ProductImages({ images = [] }: { images?: string[] }) {
             `}
           >
             <img
-              src={base + img}
+              src={buildImageUrl(img)} // ✅ Use helper function
               alt="thumbnail"
               className="w-20 h-20 object-cover"
               loading="lazy"
@@ -89,7 +105,7 @@ export default function ProductImages({ images = [] }: { images?: string[] }) {
 
         {selected && (
           <img
-            src={base + selected}
+            src={buildImageUrl(selected)} // ✅ Use helper function
             alt="product"
             onLoad={() => setLoading(false)}
             onError={() => {
