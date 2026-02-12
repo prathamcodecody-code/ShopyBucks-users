@@ -5,19 +5,7 @@ import ProductCard from "./ProductCard";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { TrendingUp, ChevronRight } from "lucide-react";
-
-interface Product {
-  id: number;
-  title: string;
-  img1: string | null;
-  price: number;
-  slug?: string;
-  category: {
-    id: number;
-    name: string;
-    slug: string;
-  };
-}
+import { Product } from "@/lib/product";
 
 export default function TrendingNow() {
   const [items, setItems] = useState<Product[]>([]);
