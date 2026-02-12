@@ -2,8 +2,29 @@
 
 import { HiOutlineTrash, HiMinus, HiPlus } from "react-icons/hi2";
 
+// ================= HELPER TO BUILD IMAGE URLS =================
+function buildImageUrl(img: string | null | undefined): string {
+  if (!img) return "/placeholder.png";
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const base = `${API_URL}/uploads/products/`;
+
+  if (img.startsWith("http://") || img.startsWith("https://")) {
+    return img;
+  }
+
+  if (img.startsWith("/uploads/products/")) {
+    return API_URL + img;
+  }
+
+  return base + img;
+}
+
 type CartItem = {
   id: number;
+  quantity: number;
+  unitPrice: number; // ✅ Already discounted price from backend
+  mrp: number; // ✅ Original price before discount
   product: {
     title: string;
     img1?: string | null;
@@ -11,20 +32,12 @@ type CartItem = {
     discountType?: "PERCENT" | "FLAT" | null;
     discountValue?: number | null;
   };
-  quantity: number;
   productsize?: {
     id: number;
-    size: string;
-    price?: number | null;
-  } | null;
-  variant?: {
-    id: number;
-    color: string;
     size?: string | null;
-    price: string | number;
+    color?: string | null;
+    price?: number | null;
     img1?: string | null;
-    img2?: string | null;
-    img3?: string | null;
   } | null;
 };
 
@@ -39,40 +52,34 @@ export default function CartItemCard({
   onDecrease: () => void;
   onRemove: () => void;
 }) {
-  // ========================================
-  // DETERMINE DISPLAY VALUES BASED ON VARIANT
-  // ========================================
-  
-  // Image Priority: variant img → product img
-  const displayImage = item.variant?.img1 || item.product.img1;
+  /* =========================================================
+     ✅ DISPLAY VALUES (SKU-AWARE)
+  ========================================================= */
 
-  // Price Priority: variant price → productsize price → product price
-  const basePrice = item.variant 
-    ? Number(item.variant.price)
-    : item.productsize?.price 
-    ? Number(item.productsize.price)
-    : Number(item.product.price);
+  // Image: SKU img → product img
+  const displayImage = item.productsize?.img1 || item.product.img1;
 
-  // Size: variant size → productsize size
-  const displaySize = item.variant?.size || item.productsize?.size;
+  // Color: only from SKU
+  const displayColor = item.productsize?.color;
 
-  // Color: only from variant
-  const displayColor = item.variant?.color;
+  // Size: only from SKU
+  const displaySize = item.productsize?.size;
 
-  // Calculate final price with discount
-  let finalPrice = basePrice;
+  // ✅ Use prices from cart item (already computed by backend)
+  const finalPrice = Number(item.unitPrice); // Already discounted
+  const originalPrice = Number(item.mrp); // Before discount
+
+  // Calculate discount label
   let discountLabel = "";
-
-  if (item.product.discountType === "PERCENT" && item.product.discountValue) {
-    finalPrice = Math.round(
-      basePrice - (basePrice * item.product.discountValue) / 100
-    );
-    discountLabel = `${item.product.discountValue}% OFF`;
-  }
-
-  if (item.product.discountType === "FLAT" && item.product.discountValue) {
-    finalPrice = basePrice - item.product.discountValue;
-    discountLabel = `₹${item.product.discountValue} OFF`;
+  if (originalPrice > finalPrice) {
+    if (item.product.discountType === "PERCENT" && item.product.discountValue) {
+      discountLabel = `${item.product.discountValue}% OFF`;
+    } else if (item.product.discountType === "FLAT" && item.product.discountValue) {
+      discountLabel = `₹${item.product.discountValue} OFF`;
+    } else {
+      const savingPercent = Math.round(((originalPrice - finalPrice) / originalPrice) * 100);
+      discountLabel = `${savingPercent}% OFF`;
+    }
   }
 
   return (
@@ -80,17 +87,14 @@ export default function CartItemCard({
       
       {/* IMAGE SECTION */}
       <div className="relative w-28 h-36 bg-amazon-lightGray rounded-xl overflow-hidden shrink-0 border border-gray-100">
-        {displayImage ? (
-          <img
-            src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/products/${displayImage}`}
-            alt={item.product.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            No Image
-          </div>
-        )}
+        <img
+          src={buildImageUrl(displayImage)}
+          alt={item.product.title}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={(e) => {
+            e.currentTarget.src = "/placeholder.png";
+          }}
+        />
       </div>
 
       {/* DETAILS SECTION */}
@@ -114,7 +118,7 @@ export default function CartItemCard({
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {/* COLOR BADGE (only for variants) */}
+            {/* COLOR BADGE */}
             {displayColor && (
               <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-md">
                 <span className="text-[10px] font-bold text-amazon-mutedText uppercase tracking-wider">Color:</span>
@@ -155,17 +159,22 @@ export default function CartItemCard({
         <div className="mt-4 flex items-end justify-between border-t border-gray-50 pt-3">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
+              {/* ✅ Final price (after discount) */}
               <span className="text-xl font-black text-amazon-text tracking-tight">
                 ₹{(finalPrice * item.quantity).toLocaleString()}
               </span>
-              {finalPrice < basePrice && (
+              
+              {/* ✅ Show original price + discount if there's a saving */}
+              {finalPrice < originalPrice && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm line-through text-amazon-mutedText">
-                    ₹{(basePrice * item.quantity).toLocaleString()}
+                    ₹{(originalPrice * item.quantity).toLocaleString()}
                   </span>
-                  <span className="text-xs font-bold text-amazon-success bg-green-50 px-1.5 py-0.5 rounded">
-                    {discountLabel}
-                  </span>
+                  {discountLabel && (
+                    <span className="text-xs font-bold text-amazon-success bg-green-50 px-1.5 py-0.5 rounded">
+                      {discountLabel}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
