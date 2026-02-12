@@ -14,11 +14,12 @@ export default function CartPage() {
   const router = useRouter();
 
   const [items, setItems] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  /* ---------------- LOAD CART ---------------- */
+  /* ================= LOAD CART ================= */
   useEffect(() => {
     if (!user) {
       setLoading(false);
@@ -27,20 +28,35 @@ export default function CartPage() {
 
     api
       .get("/cart")
-      .then((res) => setItems(res.data.items || []))
-      .catch(() => setItems([]))
+      .then((res) => {
+        setItems(res.data.items || []);
+        setSummary(res.data.summary || null);
+      })
+      .catch(() => {
+        setItems([]);
+        setSummary(null);
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
-  /* ---------------- REMOVE ITEM ---------------- */
+  /* ================= REMOVE ITEM ================= */
   const removeItem = async (id: number) => {
     setUpdatingId(id);
-    await api.delete(`/cart/${id}`);
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setUpdatingId(null);
+    try {
+      await api.delete(`/cart/${id}`);
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      
+      // Recalculate summary
+      const newItems = items.filter((i) => i.id !== id);
+      recalculateSummary(newItems);
+    } catch (error) {
+      console.error("Failed to remove item:", error);
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
-  /* ---------------- UPDATE QUANTITY ---------------- */
+  /* ================= UPDATE QUANTITY ================= */
   const updateQty = async (id: number, qty: number) => {
     if (qty < 1) return;
 
@@ -50,6 +66,12 @@ export default function CartPage() {
       setItems((prev) =>
         prev.map((i) => (i.id === id ? { ...i, quantity: qty } : i))
       );
+      
+      // Recalculate summary
+      const newItems = items.map((i) => 
+        i.id === id ? { ...i, quantity: qty } : i
+      );
+      recalculateSummary(newItems);
     } catch (error) {
       console.error("Failed to update quantity:", error);
     } finally {
@@ -57,7 +79,27 @@ export default function CartPage() {
     }
   };
 
-  /* ---------------- AUTH REQUIRED ---------------- */
+  /* ================= RECALCULATE SUMMARY ================= */
+  const recalculateSummary = (currentItems: any[]) => {
+    const mrpTotal = currentItems.reduce(
+      (sum, item) => sum + Number(item.mrp || item.unitPrice) * item.quantity,
+      0
+    );
+    const subtotal = currentItems.reduce(
+      (sum, item) => sum + Number(item.unitPrice) * item.quantity,
+      0
+    );
+
+    setSummary({
+      mrpTotal,
+      subtotal,
+      productDiscount: mrpTotal - subtotal,
+      couponDiscount: 0,
+      payable: subtotal,
+    });
+  };
+
+  /* ================= AUTH REQUIRED ================= */
   if (!user && !loading) {
     return (
       <div className="max-w-md mx-auto py-32 px-6 text-center">
@@ -83,7 +125,7 @@ export default function CartPage() {
     );
   }
 
-  /* ---------------- LOADER ---------------- */
+  /* ================= LOADER ================= */
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-1 lg:grid-cols-3 gap-10">
@@ -101,7 +143,7 @@ export default function CartPage() {
     );
   }
 
-  /* ---------------- EMPTY CART ---------------- */
+  /* ================= EMPTY CART ================= */
   if (items.length === 0) {
     return (
       <div className="max-w-md mx-auto py-32 px-6 text-center">
@@ -124,42 +166,16 @@ export default function CartPage() {
     );
   }
 
-  /* ---------------- TOTALS (VARIANT-AWARE) ---------------- */
-  const calculateItemPrice = (item: any) => {
-    // Get base price from variant → productsize → product
-    let basePrice = item.variant
-      ? Number(item.variant.price)
-      : item.productsize?.price
-      ? Number(item.productsize.price)
-      : Number(item.product.price);
-
-    // Apply discount if exists
-    if (item.product.discountType === "PERCENT" && item.product.discountValue) {
-      basePrice = Math.round(
-        basePrice - (basePrice * item.product.discountValue) / 100
-      );
-    }
-
-    if (item.product.discountType === "FLAT" && item.product.discountValue) {
-      basePrice = basePrice - item.product.discountValue;
-    }
-
-    return basePrice * item.quantity;
+  /* ================= ✅ USE BACKEND SUMMARY ================= */
+  const displaySummary = summary || {
+    mrpTotal: 0,
+    subtotal: 0,
+    productDiscount: 0,
+    couponDiscount: 0,
+    payable: 0,
   };
 
-  const calculateItemOriginalPrice = (item: any) => {
-    const basePrice = item.variant
-      ? Number(item.variant.price)
-      : item.productsize?.price
-      ? Number(item.productsize.price)
-      : Number(item.product.price);
-
-    return basePrice * item.quantity;
-  };
-
-  const subtotal = items.reduce((sum, item) => sum + calculateItemOriginalPrice(item), 0);
-  const total = items.reduce((sum, item) => sum + calculateItemPrice(item), 0);
-  const savings = subtotal - total;
+  const savings = displaySummary.productDiscount + displaySummary.couponDiscount;
 
   return (
     <div className="bg-amazon-lightGray min-h-screen">
@@ -171,7 +187,7 @@ export default function CartPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* LEFT ITEMS */}
+          {/* ================= LEFT: ITEMS ================= */}
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => (
               <div 
@@ -188,7 +204,7 @@ export default function CartPage() {
             ))}
           </div>
 
-          {/* RIGHT SUMMARY */}
+          {/* ================= RIGHT: SUMMARY ================= */}
           <div className="space-y-4 sticky top-24">
             <div className="bg-white p-8 rounded-2xl border border-amazon-borderGray shadow-sm">
               <h3 className="text-xs font-black text-amazon-mutedText uppercase tracking-widest mb-6">
@@ -198,13 +214,20 @@ export default function CartPage() {
               <div className="space-y-4 text-sm font-medium">
                 <div className="flex justify-between text-amazon-mutedText">
                   <span>Price ({items.length} items)</span>
-                  <span>₹{subtotal.toLocaleString()}</span>
+                  <span>₹{displaySummary.mrpTotal.toLocaleString()}</span>
                 </div>
 
-                {savings > 0 && (
+                {displaySummary.productDiscount > 0 && (
                   <div className="flex justify-between text-amazon-success">
                     <span>Discount</span>
-                    <span>-₹{savings.toLocaleString()}</span>
+                    <span>-₹{displaySummary.productDiscount.toLocaleString()}</span>
+                  </div>
+                )}
+
+                {displaySummary.couponDiscount > 0 && (
+                  <div className="flex justify-between text-amazon-success">
+                    <span>Coupon Discount</span>
+                    <span>-₹{displaySummary.couponDiscount.toLocaleString()}</span>
                   </div>
                 )}
 
@@ -216,7 +239,9 @@ export default function CartPage() {
                 <div className="pt-4 border-t border-gray-100">
                   <div className="flex justify-between items-end">
                     <span className="text-base font-black text-amazon-text">Total Amount</span>
-                    <span className="text-2xl font-black text-amazon-text">₹{total.toLocaleString()}</span>
+                    <span className="text-2xl font-black text-amazon-text">
+                      ₹{displaySummary.payable.toLocaleString()}
+                    </span>
                   </div>
                   {savings > 0 && (
                     <p className="text-[10px] text-amazon-success font-bold mt-1 uppercase tracking-tight">
