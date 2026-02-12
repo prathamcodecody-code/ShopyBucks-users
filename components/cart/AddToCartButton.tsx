@@ -7,12 +7,13 @@ import AuthModal from "@/app/auth/AuthModal";
 import Toast from "@/components/ui/toast";
 import ButtonLoader from "@/components/ui/ButtonLoader";
 
-interface AddToCartButtonProps {
+export interface AddToCartButtonProps {
   productId: number;
   stock: number;
   sizeId?: number;
   variantId?: number;
   disabled?: boolean;
+  selectedColor?: string | null;
   hasVariants?: boolean;
   hasSizes?: boolean;
 }
@@ -24,6 +25,7 @@ export default function AddToCartButton({
   variantId,
   disabled = false,
   hasVariants = false,
+  selectedColor = null,
   hasSizes = false,
 }: AddToCartButtonProps) {
   const { user } = useAuth();
@@ -35,19 +37,45 @@ export default function AddToCartButton({
   const [loading, setLoading] = useState(false);
 
   const handleAddToCart = async () => {
-    // Check if user is logged in
+    if (!productId) {
+  console.error("Invalid productId:", productId);
+  setToast({ type: "error", message: "Invalid product" });
+  return;
+}
+    // Check authentication
     if (!user) {
       setShowAuth(true);
       return;
     }
 
-    // Validation: Check if size/variant selection is required
-    if (hasVariants || hasSizes) {
-      if (!sizeId && !variantId) {
-        setToast({ type: "error", message: "Please select a size" });
-        return;
-      }
+    // 🔥 KEY FIX: Validation logic
+    // Case 1: Product has sizes → size selection is required
+    if (hasSizes && !sizeId) {
+      setToast({ type: "error", message: "Please select a size" });
+      return;
     }
+
+    // Case 2: Product has variants without sizes → variant selection is required
+    // If product has color variants
+if (hasVariants) {
+  if (hasVariants && !selectedColor) {
+  setToast({ type: "error", message: "Please select a color" });
+  return;
+}
+
+  // If variants also have sizes
+  if (hasSizes && !sizeId) {
+    setToast({ type: "error", message: "Please select a size" });
+    return;
+  }
+}
+
+// If no variants but has sizes
+if (!hasVariants && hasSizes && !sizeId) {
+  setToast({ type: "error", message: "Please select a size" });
+  return;
+}
+
 
     // Check stock
     if (stock < 1) {
@@ -58,13 +86,15 @@ export default function AddToCartButton({
     try {
       setLoading(true);
       
-      // Build payload based on what's available
+      // Build payload
       const payload: any = { productId };
       
+      // Add variant if selected
       if (variantId) {
         payload.variantId = variantId;
       }
       
+      // Add size if selected
       if (sizeId) {
         payload.sizeId = sizeId;
       }
@@ -79,7 +109,7 @@ export default function AddToCartButton({
     }
   };
 
-  // Determine button state
+  // Button state
   const isOutOfStock = stock < 1;
   const isDisabled = disabled || loading || isOutOfStock;
 
