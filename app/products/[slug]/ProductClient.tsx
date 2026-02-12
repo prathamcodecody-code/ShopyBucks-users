@@ -247,13 +247,15 @@ export default function ProductClient({ product }: any) {
 
       {/* ACTION BUTTON */}
       <div className="pt-2">
-        <AddToCartButton
-          productId={product.id}
-          stock={displayStock}
-          sizeId={activeSKU?.id}
-          selectedColor={selectedColor}
-          disabled={isOutOfStock || (requiresSize && !selectedSize)}
-        />
+            <AddToCartButton
+  productId={product.id}
+  stock={displayStock}
+  sizeId={activeSKU?.id}
+  selectedColor={selectedColor}
+  hasVariants={skus.length > 0}
+  hasSizes={requiresSize}
+  disabled={isOutOfStock || (requiresSize && !selectedSize)}
+/>
       </div>
 
       {/* NEW: PRODUCT DETAILS SECTION (Bento Layout) */}
@@ -326,3 +328,4 @@ export default function ProductClient({ product }: any) {
 </div>
   );
 }
+
