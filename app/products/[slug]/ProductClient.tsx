@@ -10,21 +10,35 @@ import { api } from "@/lib/api";
 import { Star } from "lucide-react";
 
 export default function ProductClient({ product }: any) {
-  /* -----------------------------------------
-      STATE
-  ----------------------------------------- */
-  const [selectedSize, setSelectedSize] = useState<any | null>(null);
+  const baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/uploads/products/`;
+
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<any | null>(null);
+
+  /* =========================================================
+      1️⃣ SKUs
+  ========================================================= */
+
+  const skus = useMemo(
+    () => (Array.isArray(product?.skus) ? product.skus : []),
+    [product?.skus]
+  );
+
+  /* =========================================================
+      2️⃣ DEFAULT COLOR (FIRST AVAILABLE SKU COLOR)
+  ========================================================= */
 
   useEffect(() => {
-    if (product.hasVariants && product.baseColor && !selectedColor) {
-      setSelectedColor(product.baseColor);
+    if (!selectedColor && skus.length > 0) {
+      const firstColor = skus.find((s: any) => s.color)?.color;
+      if (firstColor) setSelectedColor(firstColor);
     }
-  }, [product.hasVariants, product.baseColor, selectedColor]);
+  }, [skus, selectedColor]);
 
-  /* -----------------------------------------
-      REVIEWS
-  ----------------------------------------- */
+  /* =========================================================
+      3️⃣ REVIEWS
+  ========================================================= */
+
   const [reviews, setReviews] = useState<any[]>([]);
   const [avg, setAvg] = useState<number | null>(null);
 
@@ -32,7 +46,7 @@ export default function ProductClient({ product }: any) {
     api.get(`/reviews/product/${product.id}`)
       .then(res => {
         setReviews(res.data.reviews || []);
-        setAvg(res.data.averageRating);
+        setAvg(res.data.averageRating || null);
       })
       .catch(() => {
         setReviews([]);
@@ -40,181 +54,275 @@ export default function ProductClient({ product }: any) {
       });
   }, [product.id]);
 
-  /* -----------------------------------------
-      DERIVED VALUES
-  ----------------------------------------- */
-  const productSizes = Array.isArray(product.productsize) ? product.productsize : [];
-  const hasColorVariants = product.hasVariants && Array.isArray(product.variants) && product.variants.length > 0;
+  /* =========================================================
+      4️⃣ COLOR GROUP
+  ========================================================= */
 
-  const activeVariant = useMemo(() => {
-    if (!hasColorVariants || !selectedColor || selectedColor === product.baseColor) return null;
-    if (selectedSize) return selectedSize;
-    return product.variants.find((v: any) => v.color === selectedColor) || null;
-  }, [hasColorVariants, selectedColor, selectedSize, product.variants, product.baseColor]);
+  const skusForColor = useMemo(() => {
+    if (!selectedColor) return [];
+    return skus.filter((s: any) => s.color === selectedColor);
+  }, [skus, selectedColor]);
+
+  /* =========================================================
+      5️⃣ ACTIVE SKU (COLOR + SIZE)
+  ========================================================= */
+
+  const activeSKU = useMemo(() => {
+    if (!selectedColor) return null;
+    if (!selectedSize) return null;
+
+    return skus.find(
+      (s: any) =>
+        s.color === selectedColor &&
+        s.id === selectedSize.id
+    ) || null;
+  }, [skus, selectedColor, selectedSize]);
+
+  /* =========================================================
+      6️⃣ IMAGES
+  ========================================================= */
 
   const activeImages = useMemo(() => {
-    const variantImages = [activeVariant?.img1, activeVariant?.img2, activeVariant?.img3].filter(Boolean);
-    if (variantImages.length > 0) return variantImages;
-    return [product.img1, product.img2, product.img3, product.img4].filter(Boolean);
-  }, [activeVariant, product]);
+    // If exact SKU selected → use its images
+    if (activeSKU) {
+      const skuImgs = [activeSKU.img1, activeSKU.img2, activeSKU.img3]
+        .filter(Boolean)
+        .map((img: string) => baseUrl + img);
 
-  const activePrice = useMemo(() => {
-    if (!hasColorVariants && selectedSize?.price) return Number(selectedSize.price);
-    if (activeVariant?.price) return Number(activeVariant.price);
-    if (selectedSize?.price != null) return Number(selectedSize.price);
-    return Number(product.finalPrice ?? product.price);
-  }, [selectedSize, activeVariant, hasColorVariants, product]);
-
-  const activeStock = useMemo(() => {
-    if (selectedSize?.stock !== undefined) return Number(selectedSize.stock);
-    if (activeVariant?.stock !== undefined) return Number(activeVariant.stock);
-    return Number(product.stock ?? 0);
-  }, [selectedSize, activeVariant, product.stock]);
-
-  const isOutOfStock = activeStock <= 0;
-
-  const pricing = product.pricing || { mrp: Number(product.price) || 0, discountPercent: 0 };
-  const displayMRP = useMemo(() => {
-    if (!hasColorVariants && selectedSize?.price) {
-      const sizePrice = Number(selectedSize.price);
-      return pricing.discountPercent > 0 ? Math.round(sizePrice / (1 - pricing.discountPercent / 100)) : sizePrice;
+      if (skuImgs.length > 0) return skuImgs;
     }
-    return pricing.mrp;
-  }, [hasColorVariants, selectedSize, pricing]);
+
+    // Otherwise use product main images
+    return [product.img1, product.img2, product.img3, product.img4]
+      .filter(Boolean)
+      .map((img: string) => baseUrl + img);
+  }, [activeSKU, product, baseUrl]);
+
+  /* =========================================================
+      7️⃣ PRICE & DISCOUNT (✅ FIXED)
+  ========================================================= */
+
+  const displayPricing = useMemo(() => {
+    // ✅ Exact SKU selected → use its pricing
+    if (activeSKU?.pricing) {
+      return activeSKU.pricing;
+    }
+
+    // ✅ Color group → find lowest price
+    if (skusForColor.length > 0) {
+      const lowestSKU = skusForColor.reduce((min: any, s: any) => {
+        const sPrice = s.finalPrice ?? s.pricing?.sellingPrice ?? s.price;
+        const minPrice = min.finalPrice ?? min.pricing?.sellingPrice ?? min.price;
+        return sPrice < minPrice ? s : min;
+      });
+
+      return lowestSKU.pricing || {
+        mrp: lowestSKU.price,
+        sellingPrice: lowestSKU.finalPrice || lowestSKU.price,
+        hasDiscount: false,
+      };
+    }
+
+    // ✅ Fallback to product-level pricing
+    return product.pricing || {
+      mrp: product.price,
+      sellingPrice: product.finalPrice || product.price,
+      hasDiscount: false,
+    };
+  }, [activeSKU, skusForColor, product]);
+
+  /* =========================================================
+      8️⃣ STOCK
+  ========================================================= */
+
+  const displayStock = useMemo(() => {
+    if (activeSKU) return activeSKU.stock;
+
+    if (skusForColor.length > 0) {
+      return skusForColor.reduce(
+        (sum: number, s: any) => sum + s.stock,
+        0
+      );
+    }
+
+    return product.totalStock;
+  }, [activeSKU, skusForColor, product.totalStock]);
+
+  const isOutOfStock = displayStock <= 0;
+
+  /* =========================================================
+      9️⃣ SIZE REQUIREMENT (COLOR AWARE)
+  ========================================================= */
+
+  const requiresSize = useMemo(() => {
+    if (!selectedColor) return false;
+    return skusForColor.some((s: any) => s.size);
+  }, [skusForColor, selectedColor]);
+
+  /* =========================================================
+      🔟 RENDER
+  ========================================================= */
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 lg:py-12">
-      {/* REFINED GRID: 
-          Changed gap to 16 for better breathing room and adjusted column ratio
-      */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
-        
-        {/* IMAGES: Taking up 5/12 columns to make images smaller and more focused */}
-        <div className="lg:col-span-5 sticky top-24">
-          <ProductImages images={activeImages} />
-        </div>
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
-        {/* DETAILS: Taking up 7/12 columns */}
-        <div className="lg:col-span-7 flex flex-col space-y-6">
-          <div className="space-y-3">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-genz-accent">
-              {product.category?.name}
-            </p>
+    {/* LEFT: IMAGES */}
+    <div className="lg:col-span-5 sticky top-24">
+      <ProductImages images={activeImages} />
+    </div>
 
-            {/* REDUCED TITLE SIZE: Changed from 5xl to 3xl for better hierarchy */}
-            <h1 className="text-2xl md:text-3xl font-black text-genz-ink leading-tight uppercase tracking-tighter">
-              {product.title}
-            </h1>
+    {/* RIGHT: DETAILS */}
+    <div className="lg:col-span-7 flex flex-col space-y-8">
+      
+      {/* HEADER SECTION */}
+      <div className="space-y-3">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-genz-accent">
+          {product.category?.name}
+        </p>
+        <h1 className="text-2xl md:text-3xl font-black text-genz-ink leading-tight uppercase tracking-tighter">
+          {product.title}
+        </h1>
 
-            {/* HIDE RATINGS IF 0: Uses logical AND to check for existence and non-zero value */}
-            {avg !== null && avg > 0 && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
-                  {avg} <Star size={12} className="ml-1 fill-genz-accent text-genz-accent" />
-                </div>
-                <span className="text-xs font-bold text-genz-muted uppercase tracking-widest">
-                  {reviews.length} Ratings
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex items-baseline gap-4">
-              <span className="text-4xl font-black text-genz-ink tracking-tighter">₹{activePrice}</span>
-              {pricing.discountPercent > 0 && (
-                <>
-                  <span className="text-xl line-through text-genz-muted opacity-50 font-bold">
-                    ₹{displayMRP}
-                  </span>
-                  <span className="text-xl font-black text-genz-accent">
-                    {pricing.discountPercent}% OFF
-                  </span>
-                </>
-              )}
+        {/* HIDE RATINGS IF 0 */}
+        {avg !== null && avg > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
+              {avg.toFixed(1)} <Star size={12} className="ml-1 fill-genz-accent text-genz-accent" />
             </div>
-            {pricing.discountPercent > 0 && (
-              <p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
-                You save ₹{Math.round(displayMRP - activePrice)}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-              isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
-            }`}>
-              {isOutOfStock ? "Out of Stock" : `In Stock · ${activeStock} left`}
+            <span className="text-xs font-bold text-genz-muted uppercase tracking-widest">
+              {reviews.length} Ratings
             </span>
           </div>
+        )}
+      </div>
 
-          <div className="py-4 border-y border-genz-border">
-            <ProductVariantSelector
-              product={product}
-              selectedColor={selectedColor}
-              selectedSizeId={selectedSize?.id ?? null}
-              baseUrl={`${process.env.NEXT_PUBLIC_API_URL}/uploads/products/`}
-              onColorChange={(color) => {
-                setSelectedColor(color);
-                setSelectedSize(null);
-              }}
-              onSizeChange={setSelectedSize}
-            />
+      {/* PRICE SECTION */}
+      <div className="space-y-1">
+        <div className="flex items-baseline gap-4">
+          <span className="text-4xl font-black text-genz-ink tracking-tighter">
+            ₹{displayPricing.sellingPrice.toLocaleString()}
+          </span>
+          {displayPricing.hasDiscount && (
+            <>
+              <span className="text-xl line-through text-genz-muted opacity-50 font-bold">
+                ₹{displayPricing.mrp.toLocaleString()}
+              </span>
+              <span className="text-xl font-black text-genz-accent uppercase">
+                {displayPricing.discountPercent}% OFF
+              </span>
+            </>
+          )}
+        </div>
+        {displayPricing.hasDiscount && (
+          <p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
+            You save ₹{displayPricing.discountAmount.toLocaleString()}
+          </p>
+        )}
+      </div>
+
+      {/* STOCK BADGE */}
+      <div>
+        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+          isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+        }`}>
+          {isOutOfStock ? "Out of Stock" : `In Stock · ${displayStock} left`}
+        </span>
+      </div>
+
+      {/* VARIANT SELECTOR */}
+      <div className="py-4 border-y border-genz-border">
+        <ProductVariantSelector
+          product={product}
+          selectedColor={selectedColor}
+          selectedSize={selectedSize}
+          baseUrl={baseUrl}
+          onColorChange={(color: string | null) => {
+            setSelectedColor(color);
+            setSelectedSize(null);
+          }}
+          onSizeChange={setSelectedSize}
+        />
+      </div>
+
+      {/* ACTION BUTTON */}
+      <div className="pt-2">
+        <AddToCartButton
+          productId={product.id}
+          stock={displayStock}
+          sizeId={activeSKU?.id}
+          selectedColor={selectedColor}
+          disabled={isOutOfStock || (requiresSize && !selectedSize)}
+        />
+      </div>
+
+      {/* NEW: PRODUCT DETAILS SECTION (Bento Layout) */}
+      <div className="space-y-6 pt-6 border-t border-genz-border">
+        <h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
+          Product Specifications
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* DESCRIPTION CARD */}
+          <div className="md:col-span-2 p-5 bg-genz-bg rounded-genz border border-genz-border">
+            <h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">Description</h3>
+            <p className="text-sm text-genz-ink font-medium leading-relaxed">
+              {product.description || "Minimalist style for the modern wardrobe."}
+            </p>
           </div>
 
-          <div className="pt-2">
-            <AddToCartButton
-              productId={product.id}
-              stock={activeStock}
-              sizeId={selectedSize?.id}
-              variantId={activeVariant?.id}
-              hasVariants={hasColorVariants}
-              hasSizes={productSizes.length > 0}
-              disabled={(hasColorVariants || productSizes.length > 0) && !selectedSize}
-            />
-          </div>
-
-          {/* BENTO STYLE PRODUCT DETAILS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-            <div className="p-4 bg-genz-bg rounded-genz border border-genz-border">
-              <h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">Specs</h3>
-              <div className="space-y-2 text-xs font-bold uppercase">
-                <div className="flex justify-between"><span>Weight</span><span className="text-genz-muted">{product.weight}g</span></div>
-                <div className="flex justify-between"><span>Category</span><span className="text-genz-muted">{product.category?.name}</span></div>
-                {activeVariant?.color && <div className="flex justify-between"><span>Color</span><span className="text-genz-muted">{activeVariant.color}</span></div>}
+          {/* ATTRIBUTES CARD */}
+          <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
+            <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">Technical Specs</h3>
+            <div className="space-y-3 text-xs font-bold uppercase">
+              <div className="flex justify-between border-b border-genz-border pb-2">
+                <span className="text-genz-muted">Category</span>
+                <span>{product.category?.name}</span>
+              </div>
+              <div className="flex justify-between border-b border-genz-border pb-2">
+                <span className="text-genz-muted">Weight</span>
+                <span>{product.weight || "N/A"}g</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-genz-muted">Season</span>
+                <span>{product.season || "ALL SEASON"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-genz-muted">Occasion</span>
+                <span>{product.occasion || "FORMAL"}</span>
               </div>
             </div>
-            <div className="p-4 bg-genz-bg rounded-genz border border-genz-border">
-              <h3 className="text-[10px] font-black uppercase tracking-widest mb-2 text-genz-muted">Description</h3>
-              <p className="text-xs text-genz-muted font-medium leading-relaxed line-clamp-4">
-                {product.description || "Minimalist style for the modern wardrobe."}
-              </p>
+          </div>
+
+          {/* TAGS/INFO CARD */}
+          <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
+            <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">Extras</h3>
+            <div className="space-y-3 text-xs font-bold uppercase">
+              <div className="flex justify-between border-b border-genz-border pb-2">
+                <span className="text-genz-muted">Shipping</span>
+                <span>Calculated at checkout</span>
+              </div>
+              <div className="flex justify-between border-b border-genz-border pb-2">
+                <span className="text-genz-muted">Returns</span>
+                <span>7 Days Easy Policy</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-genz-muted">Authentic</span>
+                <span>100% Genuine product</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* REVIEWS & RECOMMENDATIONS */}
-      <div className="mt-24 space-y-16">
-        {reviews.length > 0 && (
-          <div className="pt-16 border-t border-genz-border">
-            <h2 className="text-2xl font-black uppercase tracking-tighter mb-8">Customer Feedback</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reviews.map((r) => (
-                <div key={r.id} className="bg-white p-6 rounded-genz border border-genz-border shadow-sm">
-                  <div className="flex justify-between mb-4">
-                    <p className="font-black text-xs uppercase tracking-widest">{r.user?.name || "Verified Buyer"}</p>
-                    <span className="text-genz-accent font-black text-xs">{r.rating} ★</span>
-                  </div>
-                  {r.comment && <p className="text-sm text-genz-muted font-medium italic">"{r.comment}"</p>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <TrendingNow />
-        <NewArrivals />
-      </div>
     </div>
+  </div>
+
+  {/* REVIEWS & RECOMMENDATIONS */}
+  <div className="mt-24 space-y-24">
+    <TrendingNow />
+    <NewArrivals />
+  </div>
+</div>
   );
 }
