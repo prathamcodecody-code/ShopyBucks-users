@@ -4,18 +4,39 @@
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background-color: #f8f8f8;
+  background-color: #F9FAFB; /* Updated to your genz-bg */
+  color: #0F172A; /* Updated to your genz-ink */
 }
 
+/* ================= CUSTOM SCROLLER SIZE ================= */
+/* Target Chrome, Safari, and Edge */
 ::-webkit-scrollbar {
-  height: 6px;
+  width: 5px;  /* Decreased width for vertical scroller */
+  height: 5px; /* Decreased height for horizontal scroller */
 }
+
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
 ::-webkit-scrollbar-thumb {
-  background: #ff5c8a;
-  border-radius: 10px;
+  background: #64748B; /* Your genz-muted blue-gray */
+  border-radius: 20px;
+  border: 1px solid transparent; /* Gives it a bit of "breathing room" */
+  background-clip: content-box;
 }
 
+::-webkit-scrollbar-thumb:hover {
+  background: #EA580C; /* Your genz-accent orange on hover */
+}
 
+/* Target Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: orange transparent; /* thumb color and track color */
+}
+
+/* ================= ANIMATIONS ================= */
 @keyframes fade-in {
   from {
     opacity: 0;
