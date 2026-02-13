@@ -6,14 +6,13 @@ import { api } from "@/lib/api";
 import { Sparkles, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-/* ---------------- SKELETON CARD ---------------- */
+/* ---------------- SKELETON CARD (Updated to 3/4 Ratio) ---------------- */
 function ProductSkeleton() {
   return (
-    <div className="bg-genz-card border border-genz-border p-4 rounded-genz animate-pulse">
-      <div className="aspect-[4/5] bg-genz-bg rounded-2xl mb-4" />
-      <div className="h-4 bg-genz-bg rounded-full w-3/4 mb-2" />
-      <div className="h-4 bg-genz-bg rounded-full w-1/2 mb-4" />
-      <div className="h-10 bg-genz-bg rounded-full w-full" />
+    <div className="space-y-4">
+      <div className="aspect-[3/4] bg-genz-border/40 rounded-genz animate-pulse" />
+      <div className="h-3 bg-genz-border/40 rounded-full w-3/4 animate-pulse" />
+      <div className="h-3 bg-genz-border/40 rounded-full w-1/2 animate-pulse" />
     </div>
   );
 }
@@ -27,10 +26,7 @@ export default function NewArrivals() {
       .get("/products?limit=8")
       .then((res) => {
         const data = res.data;
-        const list =
-          Array.isArray(data) ? data :
-          Array.isArray(data?.products) ? data.products :
-          [];
+        const list = Array.isArray(data) ? data : Array.isArray(data?.products) ? data.products : [];
         setProducts(list);
       })
       .catch(() => setProducts([]))
@@ -38,51 +34,51 @@ export default function NewArrivals() {
   }, []);
 
   return (
-    <section className="bg-genz-bg py-20 px-4 sm:px-6 md:px-8">
+    <section className="bg-genz-bg py-16 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         
-        {/* HEADER SECTION: Clean & Impactful */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-genz-accent font-black text-xs uppercase tracking-[0.3em]">
-              <Sparkles size={16} />
+        {/* HEADER SECTION: Compact & Precise */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-genz-accent font-black text-[10px] uppercase tracking-[0.4em]">
+              <Sparkles size={14} strokeWidth={3} />
               Just In
             </div>
-            <h2 className="text-4xl md:text-5xl font-black text-genz-ink tracking-tighter uppercase leading-none">
+            <h2 className="text-3xl md:text-5xl font-black text-genz-ink tracking-tighter uppercase italic leading-none">
               New <span className="text-genz-accent">Arrivals</span>
             </h2>
-            <p className="text-genz-muted max-w-sm text-sm md:text-base font-medium">
-              Fresh styles updated daily. Discover the latest additions to our curation.
+            <p className="text-genz-muted max-w-sm text-xs md:text-sm font-medium">
+              The latest drops, updated daily. Fresh heat for your rotation.
             </p>
           </div>
 
           <Link 
             href="/all-products?sort=newest"
-            className="inline-flex items-center gap-2 font-bold text-genz-ink hover:text-genz-accent transition-all group bg-white px-6 py-3 rounded-full shadow-sm border border-genz-border hover:shadow-md"
+            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-genz-ink hover:text-genz-accent transition-all group border-b-2 border-genz-ink hover:border-genz-accent pb-1"
           >
-            Explore All
-            <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />
+            See the full drop
+            <ChevronRight size={14} className="transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
 
-        {/* GRID CONTAINER */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 lg:gap-8">
+        {/* GRID CONTAINER: Consistent 2-column mobile, 4-column PC */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {loading ? (
             Array.from({ length: 8 }).map((_, i) => (
               <ProductSkeleton key={i} />
             ))
           ) : products.length === 0 ? (
-            <div className="col-span-full text-center py-24 bg-white border border-dashed border-genz-border rounded-genz">
-              <p className="text-genz-muted font-bold uppercase tracking-widest text-sm">
-                Restocking the heat... Check back soon.
+            <div className="col-span-full text-center py-20 border-2 border-dashed border-genz-border rounded-genz">
+              <p className="text-genz-muted font-black uppercase tracking-widest text-[10px]">
+                Restocking the vault... Check back soon.
               </p>
             </div>
           ) : (
             products.map((p) => (
-              <div key={p.id} className="relative group transition-transform duration-500 hover:-translate-y-2">
-                {/* GEN Z BADGE: Pill-shaped and vibrant */}
-                <div className="absolute top-3 left-3 z-10 bg-genz-ink text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg">
-                  New
+              <div key={p.id} className="relative transition-transform duration-500 hover:-translate-y-1">
+                {/* FLOATING "NEW" TAG: Smaller and cleaner */}
+                <div className="absolute top-2 left-2 z-10 bg-genz-ink text-white text-[8px] font-black px-2 py-0.5 rounded shadow-xl uppercase tracking-tighter">
+                  Drop #1
                 </div>
                 <ProductCard product={p} />
               </div>
