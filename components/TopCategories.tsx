@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 
 type Category = {
   id: number;
@@ -37,21 +37,26 @@ export default function TopCategories() {
   }, [categories]);
 
   return (
-    <section className="bg-genz-bg py-16 px-4 sm:px-6 md:px-8">
+    <section className="bg-genz-bg py-12 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         
-        {/* HEADER: Minimalist and Bold */}
-        <div className="mb-12">
-          <p className="text-genz-accent font-black text-xs uppercase tracking-[0.3em] mb-2">
-            Curated Picks
-          </p>
-          <h2 className="text-3xl md:text-5xl font-black text-genz-ink tracking-tighter uppercase leading-tight">
-            Top <span className="text-genz-accent">Sellers</span>
-          </h2>
+        {/* HEADER: Tighter and more modern */}
+        <div className="flex justify-between items-end mb-10">
+          <div>
+            <p className="text-genz-accent font-black text-[10px] uppercase tracking-[0.4em] mb-1">
+              Top Categories
+            </p>
+            <h2 className="text-2xl md:text-4xl font-black text-genz-ink tracking-tighter uppercase italic">
+              Top <span className="text-genz-accent">Sellers</span>
+            </h2>
+          </div>
+          <Link href="/all-products" className="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-genz-muted hover:text-genz-accent transition-colors">
+            View All <ArrowRight size={14} />
+          </Link>
         </div>
 
-        {/* GRID: Bento-style Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* GRID: Adjusted to 2 cols mobile, 4 cols desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {categories.map((cat) => {
             const product = categoryProducts[cat.id]?.[0];
 
@@ -59,46 +64,46 @@ export default function TopCategories() {
               <Link
                 key={cat.id}
                 href={`/all-products?categoryId=${cat.id}`}
-                className="group relative bg-white border border-genz-border rounded-genz overflow-hidden hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all duration-500 flex flex-col h-full"
+                className="group relative bg-white border border-genz-border rounded-genz overflow-hidden transition-all duration-500 flex flex-col h-full"
               >
-                {/* IMAGE CONTAINER: Aspect ratio locked to 4/5 for consistency */}
-                <div className="relative aspect-[4/5] bg-genz-bg flex items-center justify-center p-8 overflow-hidden">
+                {/* IMAGE CONTAINER: Aspect ratio changed to 3/4 for a sleeker look */}
+                <div className="relative aspect-[3/4] bg-genz-bg flex items-center justify-center overflow-hidden">
                   {product?.img1 ? (
                     <img
                       src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/products/${product.img1}`}
                       alt={cat.name}
-                      /* FIX: object-contain prevents the image from looking "too big" */
-                      className="max-w-full max-h-full object-contain transition-transform duration-700 group-hover:scale-110"
+                      /* FIX: object-cover for that premium "filled" look, or contain if you prefer padding */
+                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                     />
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-genz-muted">
-                      <div className="w-12 h-12 bg-genz-border rounded-full animate-pulse" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">No Visual</span>
+                      <div className="w-8 h-8 bg-genz-border rounded-full animate-pulse" />
+                      <span className="text-[8px] font-bold uppercase tracking-widest">No Visual</span>
                     </div>
                   )}
                   
-                  {/* Subtle Badge */}
-                  <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black text-genz-ink border border-genz-border tracking-widest uppercase">
+                  {/* Floating Label Badge */}
+                  <div className="absolute top-3 left-3 bg-white px-2 py-0.5 rounded shadow-sm text-[8px] font-black text-genz-ink border border-genz-border tracking-tighter uppercase">
                     Best Seller
+                  </div>
+
+                  {/* Hover Overlay Icon */}
+                  <div className="absolute inset-0 bg-genz-ink/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                     <div className="bg-white p-2 rounded-full shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                        <Plus className="text-genz-accent" size={18} />
+                     </div>
                   </div>
                 </div>
 
-                {/* CONTENT AREA: Focused on clean typography */}
-                <div className="p-6 flex flex-col flex-1 justify-between bg-white">
-                  <div>
-                    <h3 className="text-xl font-black text-genz-ink tracking-tight uppercase group-hover:text-genz-accent transition-colors">
-                      {cat.name}
-                    </h3>
-                    <p className="text-xs font-bold text-genz-muted uppercase tracking-widest mt-1">
-                      {categoryProducts[cat.id]?.length || 0} ITEMS
-                    </p>
-                  </div>
-
-                  <div className="mt-6 flex items-center justify-between">
-                    <span className="text-xs font-black text-genz-ink uppercase tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-2">
-                      Shop Collection <ArrowRight size={14} className="text-genz-accent" />
-                    </span>
-                  </div>
+                {/* CONTENT AREA: Reduced padding and centered for a clean grid */}
+                <div className="p-4 flex flex-col items-center text-center bg-white border-t border-genz-border">
+                  <h3 className="text-sm font-black text-genz-ink tracking-tight uppercase group-hover:text-genz-accent transition-colors">
+                    {cat.name}
+                  </h3>
+                  <div className="mt-1 h-0.5 w-0 group-hover:w-8 bg-genz-accent transition-all duration-300" />
+                  <p className="text-[9px] font-bold text-genz-muted uppercase tracking-[0.2em] mt-2">
+                    {categoryProducts[cat.id]?.length || 0} Drops
+                  </p>
                 </div>
               </Link>
             );
