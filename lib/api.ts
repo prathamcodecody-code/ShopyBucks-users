@@ -2,11 +2,10 @@ import axios from "axios";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
 });
 
 /* ================================
-   REQUEST INTERCEPTOR (TOKEN)
+   REQUEST INTERCEPTOR (JWT)
 ================================ */
 api.interceptors.request.use(
   (config) => {
@@ -22,41 +21,67 @@ api.interceptors.request.use(
 );
 
 /* ================================
-   RESPONSE INTERCEPTOR (ERROR SHIELD)
+   RESPONSE INTERCEPTOR (SAFE)
 ================================ */
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Network error / server down
     if (!error.response) {
-      if (typeof window !== "undefined") {
-        window.location.replace("/error");
-      }
       return Promise.reject(error);
     }
 
     const status = error.response.status;
+    const config = error.config;
+    const url = config?.url || "";
+
+    // Normalize URL
+    let pathname = url;
+    try {
+      pathname = new URL(url, config.baseURL).pathname;
+    } catch {}
 
     if (typeof window !== "undefined") {
-      switch (status) {
-        case 401:
-          // Token expired / invalid
-          localStorage.removeItem("token");
-          window.location.replace("/auth/login");
-          break;
+      const token = localStorage.getItem("token");
+      const currentPath = window.location.pathname;
 
-        case 403:
-          window.location.replace("/403");
-          break;
+      // ✅ NEVER redirect on checkout success
+      if (currentPath.startsWith("/checkout/success")) {
+        return Promise.reject(error);
+      }
 
-        case 404:
-          window.location.replace("/not-found");
-          break;
+      // ✅ NEVER redirect for coupon validation
+      if (pathname.startsWith("/coupons/validate")) {
+        return Promise.reject(error);
+      }
 
-        default:
-          if (status >= 500) {
-            window.location.replace("/error");
-          }
+      // ✅ NEVER redirect for cart/order placement
+      if (pathname.startsWith("/orders")) {
+        return Promise.reject(error);
+      }
+
+      // 401 → logout only if token exists
+      if (status === 401 && token) {
+        localStorage.removeItem("token");
+        window.location.replace("/");
+        return;
+      }
+
+      // 403 → redirect ONLY for non-checkout pages
+      if (status === 403) {
+        window.location.replace("/403");
+        return;
+      }
+
+      // 404 → optional
+      if (status === 404) {
+        window.location.replace("/404");
+        return;
+      }
+
+      // 500+
+      if (status >= 500) {
+        window.location.replace("/error");
+        return;
       }
     }
 
