@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { ArrowUpRight } from "lucide-react";
 
 type CollectionItem = {
   id: number;
@@ -20,54 +21,68 @@ export default function CollectionGridSection({
   if (!collections.length) return null;
 
   return (
-    <section className="bg-genz-bg py-12 px-4 sm:px-6 md:px-8">
+    <section className="bg-genz-bg py-16 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         
-        {/* OPTIONAL HEADER: Since it's a collection grid, a minimal title helps the vibe */}
-        <div className="mb-10 text-left">
-          <p className="text-genz-accent font-black text-xs uppercase tracking-[0.3em] mb-2">
-            Curated Series
+        {/* HEADER: Precise and High-Contrast */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+          <div>
+            <p className="text-genz-accent font-black text-[10px] uppercase tracking-[0.4em] mb-1">
+              Curated Series
+            </p>
+            <h2 className="text-3xl md:text-5xl font-black text-genz-ink tracking-tighter uppercase italic leading-none">
+              Our <span className="text-genz-accent">Collections</span>
+            </h2>
+          </div>
+          <p className="text-genz-muted text-xs md:text-sm font-medium max-w-[280px] leading-relaxed">
+            Exclusive drops and seasonal favorites selected for the modern aesthetic.
           </p>
-          <h2 className="text-2xl md:text-4xl font-black text-genz-ink tracking-tighter uppercase">
-            Our <span className="text-genz-accent">Collections</span>
-          </h2>
         </div>
 
-        {/* GRID: High-contrast bento-style cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+        {/* GRID: Sleeker 2xMobile, 4xPC Layout */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {collections.map((item) => (
             <div
               key={item.id}
               onClick={() => item.linkUrl && router.push(item.linkUrl)}
-              className="group cursor-pointer rounded-genz overflow-hidden bg-white border border-genz-border hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all duration-500"
+              className="group cursor-pointer rounded-genz overflow-hidden bg-white border border-genz-border transition-all duration-500 hover:border-genz-accent shadow-sm"
             >
-              {/* IMAGE CONTAINER: Using standard img to bypass private IP errors */}
-              <div className="relative aspect-[4/5] bg-genz-bg overflow-hidden">
+              {/* IMAGE CONTAINER: Switched to 3/4 aspect ratio */}
+              <div className="relative aspect-[3/4] bg-genz-bg overflow-hidden">
                 <img
                   src={`${process.env.NEXT_PUBLIC_API_URL}${item.imageUrl}`}
                   alt={item.title || "Collection"}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                 />
                 
-                {/* Subtle Overlay for text readability if needed */}
-                <div className="absolute inset-0 bg-genz-ink/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* Visual Interaction Overlay */}
+                <div className="absolute inset-0 bg-genz-ink/0 group-hover:bg-genz-ink/10 transition-colors duration-500" />
+                
+                {/* Floating "View" Icon */}
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                  <div className="bg-white p-2 rounded-full shadow-lg text-genz-accent">
+                    <ArrowUpRight size={16} strokeWidth={3} />
+                  </div>
+                </div>
               </div>
 
-              {/* CONTENT AREA: Clean typography and high whitespace */}
-              <div className="p-5 text-center bg-white border-t border-genz-border">
+              {/* CONTENT AREA: Magazine-style typography */}
+              <div className="p-4 md:p-6 text-center bg-white border-t border-genz-border">
                 {item.title && (
-                  <h3 className="font-black text-sm md:text-base text-genz-ink uppercase tracking-tight group-hover:text-genz-accent transition-colors">
+                  <h3 className="font-black text-xs md:text-sm text-genz-ink uppercase tracking-wider group-hover:text-genz-accent transition-colors">
                     {item.title}
                   </h3>
                 )}
                 {item.subtitle && (
-                  <p className="text-[10px] md:text-xs font-bold text-genz-muted uppercase tracking-widest mt-1.5 opacity-80">
+                  <p className="text-[9px] md:text-[10px] font-bold text-genz-muted uppercase tracking-[0.2em] mt-2 opacity-70">
                     {item.subtitle}
                   </p>
                 )}
                 
-                {/* Gen Z Interaction Bar */}
-                <div className="mt-4 h-0.5 w-0 bg-genz-accent mx-auto rounded-full group-hover:w-12 transition-all duration-300" />
+                {/* The "Gen Z" Interaction Line */}
+                <div className="mt-4 flex justify-center">
+                  <div className="h-[2px] w-4 bg-genz-border group-hover:w-10 group-hover:bg-genz-accent transition-all duration-500 rounded-full" />
+                </div>
               </div>
             </div>
           ))}
