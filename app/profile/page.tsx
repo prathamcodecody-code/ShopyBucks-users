@@ -1,299 +1,236 @@
-"use client";
+function AddressManager() {
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
 
-import { useState } from "react";
-import { useAuth } from "@/app/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
-import AuthModal from "../auth/AuthModal";
-import { User, Package, LogOut, Edit2, ShieldCheck, Mail, Phone } from "lucide-react";
-import toast from "react-hot-toast";
-
-export default function ProfilePage() {
-  const { user, logout, setUser } = useAuth();
-  const router = useRouter();
-  const [showAuth, setShowAuth] = useState(false);
-  const [activeTab, setActiveTab] = useState<"account" | "orders">("account");
-
-  if (!user) {
-    return (
-      <div className="py-20 text-center bg-amazon-lightGray min-h-[60vh] flex flex-col items-center justify-center">
-        <div className="bg-white p-8 rounded-lg border border-amazon-borderGray shadow-sm max-w-sm">
-          <p className="text-xl font-bold text-amazon-text mb-2">Your Account</p>
-          <p className="text-amazon-mutedText mb-6">Sign in to view your profile and manage orders.</p>
-          <button
-            onClick={() => setShowAuth(true)}
-            className="w-full bg-amazon-orange hover:bg-amazon-orangeHover text-amazon-text font-medium py-2 rounded shadow-sm transition-colors"
-          >
-            Sign In
-          </button>
-        </div>
-        <AuthModal show={showAuth} onClose={() => setShowAuth(false)} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-amazon-lightGray min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-6">
-        
-        {/* SIDEBAR */}
-        <aside className="space-y-4">
-          <div className="bg-white rounded-lg border border-amazon-borderGray shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-amazon-borderGray bg-gray-50">
-              <p className="font-bold text-amazon-text">Settings</p>
-            </div>
-            <div className="p-2 space-y-1">
-              <SidebarBtn
-                active={activeTab === "account"}
-                onClick={() => setActiveTab("account")}
-                icon={<User size={18} />}
-              >
-                Account Details
-              </SidebarBtn>
-
-              <SidebarBtn
-                active={activeTab === "orders"}
-                onClick={() => setActiveTab("orders")}
-                icon={<Package size={18} />}
-              >
-                My Orders
-              </SidebarBtn>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-amazon-danger hover:bg-red-50 font-medium transition-colors border border-transparent hover:border-red-100"
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
-        </aside>
-
-        {/* CONTENT */}
-        <section className="md:col-span-3 space-y-6">
-          {activeTab === "account" && (
-            <AccountDetails user={user} setUser={setUser} />
-          )}
-          {activeTab === "orders" && <OrdersShortcut />}
-        </section>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- ACCOUNT DETAILS (EDITABLE) ---------------- */
-
-function AccountDetails({ user, setUser }: any) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    name: user.name || "",
-    email: user.email || "",
-  });
-  const [loading, setLoading] = useState(false);
-
-  const saveProfile = async () => {
-    // ✅ Validation
-    if (!form.name?.trim() && !form.email?.trim()) {
-      toast.error("Please provide at least one field to update");
-      return;
-    }
-
-    // ✅ Email validation
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-
+  const fetchAddresses = async () => {
     try {
-      setLoading(true);
-      const res = await api.patch("/users/profile", {
-        name: form.name?.trim() || undefined,
-        email: form.email?.trim() || undefined,
-      });
-
-      // ✅ Update user in context with the response
-      setUser(res.data.user);
-      setEditing(false);
-      
-      // ✅ Success notification
-      toast.success(res.data.message || "Profile updated successfully!");
-      
-    } catch (err: any) {
-      console.error("Profile update error:", err);
-      const errorMessage = err?.response?.data?.message || "Failed to update profile";
-      toast.error(errorMessage);
+      const res = await api.get("/user/addresses");
+      setAddresses(res.data || []);
+    } catch {
+      toast.error("Failed to load addresses");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    // ✅ Reset form to original user data
-    setForm({
-      name: user.name || "",
-      email: user.email || "",
-    });
-    setEditing(false);
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
+  const deleteAddress = async (id: number) => {
+    if (!confirm("Delete this address?")) return;
+    try {
+      await api.delete(`/user/addresses/${id}`);
+      toast.success("Address deleted");
+      fetchAddresses();
+    } catch {
+      toast.error("Failed to delete address");
+    }
+  };
+
+  const setDefault = async (id: number) => {
+    try {
+      await api.patch(`/user/addresses/${id}`, { isDefault: true });
+      fetchAddresses();
+    } catch {
+      toast.error("Failed to set default");
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg border border-amazon-borderGray shadow-sm overflow-hidden">
-      <div className="flex justify-between items-center p-6 border-b border-amazon-borderGray">
-        <h2 className="text-xl font-bold text-amazon-text flex items-center gap-2">
-          <ShieldCheck className="text-amazon-success" size={24} />
-          Login & Security
-        </h2>
-
-        {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-2 border border-amazon-borderGray px-4 py-1.5 rounded-md hover:bg-amazon-lightGray text-sm font-medium transition-colors"
-          >
-            <Edit2 size={14} />
-            Edit
-          </button>
-        )}
+    <div className="bg-genz-card rounded-genz border border-genz-border shadow-sm p-8 space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight">Saved Addresses</h2>
+          <p className="text-genz-muted text-sm font-medium">Where we drop your gear</p>
+        </div>
+        <button
+          onClick={() => {
+            setEditing(null);
+            setShowForm(true);
+          }}
+          className="bg-genz-ink text-white px-6 py-3 rounded-xl text-sm font-black hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+        >
+          <Plus size={18} />
+          Add New
+        </button>
       </div>
 
-      <div className="p-6">
-        <div className="grid grid-cols-1 gap-8 max-w-2xl">
-          <ProfileField
-            label="Name"
-            value={form.name}
-            editing={editing}
-            icon={<User size={20} className="text-amazon-mutedText" />}
-            onChange={(v:any) => setForm({ ...form, name: v })}
-            placeholder="What is your name?"
-          />
+      {loading ? (
+        <div className="grid md:grid-cols-2 gap-4 animate-pulse">
+          <div className="h-40 bg-genz-bg rounded-genz" />
+          <div className="h-40 bg-genz-bg rounded-genz" />
+        </div>
+      ) : (
+        <>
+          {!loading && addresses.length === 0 && (
+            <div className="text-center py-12 border-2 border-dashed border-genz-border rounded-genz">
+              <p className="text-genz-muted font-bold italic">No addresses saved yet.</p>
+            </div>
+          )}
 
-          <ProfileField
-            label="Email"
-            value={form.email}
-            editing={editing}
-            icon={<Mail size={20} className="text-amazon-mutedText" />}
-            onChange={(v:any) => setForm({ ...form, email: v })}
-            placeholder="Enter email address"
-            type="email"
-          />
+          <div className="grid md:grid-cols-2 gap-6">
+            {addresses.map((a) => (
+              <div
+                key={a.id}
+                className={`group border-2 rounded-genz p-6 relative transition-all ${
+                  a.isDefault 
+                    ? "border-genz-accent bg-genz-softAccent/30" 
+                    : "border-genz-border bg-genz-card hover:border-genz-muted"
+                }`}
+              >
+                {a.isDefault && (
+                  <span className="absolute top-4 right-4 text-[10px] font-black uppercase tracking-tighter bg-genz-accent text-white px-2 py-1 rounded">
+                    Default
+                  </span>
+                )}
 
-          <div className="flex items-start gap-4">
-            <div className="mt-1"><Phone size={20} className="text-amazon-mutedText" /></div>
-            <StaticField 
-              label="Primary Phone Number" 
-              value={user.phone} 
-              badge="Cannot be changed"
-            />
+                <p className="font-black text-lg">{a.fullName}</p>
+                <p className="text-sm font-bold text-genz-muted mb-3">{a.phone}</p>
+                
+                <p className="text-sm text-genz-ink/80 leading-relaxed mb-6">
+                  {a.addressLine1}
+                  {a.addressLine2 && `, ${a.addressLine2}`}<br />
+                  {a.city}, {a.state} – {a.pincode}
+                </p>
+
+                <div className="flex gap-4 pt-4 border-t border-genz-border">
+                  <button
+                    onClick={() => {
+                      setEditing(a);
+                      setShowForm(true);
+                    }}
+                    className="text-xs font-black uppercase tracking-widest text-genz-ink hover:text-genz-accent"
+                  >
+                    Edit
+                  </button>
+
+                  {!a.isDefault && (
+                    <button
+                      onClick={() => setDefault(a.id)}
+                      className="text-xs font-black uppercase tracking-widest text-green-600 hover:text-green-700"
+                    >
+                      Set Default
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => deleteAddress(a.id)}
+                    className="text-xs font-black uppercase tracking-widest text-red-500 hover:text-red-700 ml-auto"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
+        </>
+      )}
+
+      {showForm && (
+        <AddressForm
+          initial={editing}
+          onClose={() => setShowForm(false)}
+          onSaved={() => {
+            setShowForm(false);
+            fetchAddresses();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AddressForm({ initial, onClose, onSaved }: any) {
+  const [form, setForm] = useState(
+    initial || {
+      fullName: "",
+      phone: "",
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      state: "",
+      pincode: "",
+      isDefault: false,
+    }
+  );
+
+  const save = async () => {
+    try {
+      if (initial) {
+        await api.patch(`/user/addresses/${initial.id}`, form);
+        toast.success("Address updated");
+      } else {
+        await api.post("/user/addresses", form);
+        toast.success("Address added");
+      }
+      onSaved();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to save");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-genz-ink/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-genz-card rounded-genz p-8 w-full max-w-xl shadow-2xl space-y-6">
+        <div>
+          <h3 className="text-2xl font-black tracking-tight">
+            {initial ? "Update Address" : "New Address"}
+          </h3>
+          <p className="text-genz-muted text-sm font-medium">Double check those details!</p>
         </div>
 
-        {editing && (
-          <div className="mt-10 flex gap-3 pt-6 border-t border-amazon-borderGray">
-            <button
-              onClick={saveProfile}
-              disabled={loading}
-              className="bg-amazon-orange hover:bg-amazon-orangeHover text-amazon-text px-8 py-2 rounded-md font-medium shadow-sm border border-amazon-orangeHover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Saving Changes..." : "Done"}
-            </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            ["fullName", "Full Name", "md:col-span-2"],
+            ["phone", "Phone", ""],
+            ["pincode", "Pincode", ""],
+            ["addressLine1", "Address Line 1", "md:col-span-2"],
+            ["addressLine2", "Apt, Suite, etc.", "md:col-span-2"],
+            ["city", "City", ""],
+            ["state", "State", ""],
+          ].map(([k, label, span]) => (
+            <div key={k} className={span}>
+              <label className="text-[10px] font-black uppercase text-genz-muted ml-1 mb-1 block">
+                {label}
+              </label>
+              <input
+                placeholder={label}
+                value={form[k]}
+                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
+                className="w-full border-2 border-genz-border rounded-xl px-4 py-3 focus:border-genz-accent outline-none transition-all font-bold"
+              />
+            </div>
+          ))}
+        </div>
 
-            <button
-              onClick={handleCancel}
-              disabled={loading}
-              className="px-6 py-2 rounded-md border border-amazon-borderGray hover:bg-amazon-lightGray font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ---------------- REUSABLE FIELDS ---------------- */
-
-function ProfileField({ label, value, editing, onChange, placeholder, icon, type = "text" }: any) {
-  return (
-    <div className="flex items-start gap-4">
-      <div className="mt-1">{icon}</div>
-      <div className="flex-1">
-        <p className="text-sm font-bold text-amazon-text">{label}</p>
-        {editing ? (
+        <label className="flex items-center gap-3 cursor-pointer group py-2">
           <input
-            type={type}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="mt-2 w-full max-w-sm border border-amazon-borderGray rounded px-3 py-2 focus:border-amazon-orange focus:ring-1 focus:ring-amazon-orange outline-none shadow-inner transition-colors"
+            type="checkbox"
+            checked={form.isDefault}
+            className="w-5 h-5 rounded border-genz-border text-genz-accent focus:ring-genz-accent"
+            onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
           />
-        ) : (
-          <p className="text-amazon-mutedText mt-0.5">
-            {value || <span className="italic text-gray-400">Not provided</span>}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function StaticField({ label, value, badge }: any) {
-  return (
-    <div className="flex-1">
-      <div className="flex items-center gap-2">
-        <p className="text-sm font-bold text-amazon-text">{label}</p>
-        {badge && (
-          <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
-            {badge}
+          <span className="text-sm font-bold text-genz-muted group-hover:text-genz-ink transition-colors">
+            Make this my default drop-off point
           </span>
-        )}
-      </div>
-      <p className="text-amazon-mutedText mt-0.5">{value || "-"}</p>
-    </div>
-  );
-}
+        </label>
 
-function SidebarBtn({ active, children, icon, ...props }: any) {
-  return (
-    <button
-      {...props}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all ${
-        active
-          ? "bg-amazon-lightGray text-amazon-text border-l-4 border-amazon-orange"
-          : "text-amazon-mutedText hover:bg-amazon-lightGray/50 border-l-4 border-transparent"
-      }`}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
-
-/* ---------------- ORDERS SHORTCUT ---------------- */
-
-function OrdersShortcut() {
-  const router = useRouter();
-
-  return (
-    <div className="bg-white rounded-lg border border-amazon-borderGray shadow-sm overflow-hidden">
-      <div className="p-6">
-        <h2 className="text-xl font-bold text-amazon-text mb-2">Your Orders</h2>
-        <p className="text-amazon-mutedText mb-8">
-          Track, return, or buy things again.
-        </p>
-
-        <div 
-           onClick={() => router.push("/orders")}
-           className="group border border-amazon-borderGray rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-amazon-orangeHover transition-all bg-gray-50/50"
-        >
-          <div className="w-16 h-16 bg-white border border-amazon-borderGray rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
-            <Package size={32} className="text-amazon-orange" />
-          </div>
-          <p className="font-bold text-amazon-text">View Order History</p>
-          <p className="text-sm text-amazon-mutedText">Check status of your recent purchases</p>
+        <div className="flex gap-4 pt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-4 border-2 border-genz-border rounded-xl font-black hover:bg-genz-bg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            className="flex-1 bg-genz-accent text-white px-6 py-4 rounded-xl font-black shadow-lg shadow-genz-accent/20 hover:brightness-110 active:scale-95 transition-all"
+          >
+            Save Address
+          </button>
         </div>
       </div>
     </div>
