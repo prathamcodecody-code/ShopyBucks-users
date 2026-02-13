@@ -1,60 +1,120 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { api } from "@/lib/api";
+
+type Category = {
+  id: number;
+  name: string;
+  slug: string;
+  image: string | null;
+};
 
 export default function CategoryGrid() {
-  const categories = [
-   { id: 2, title: "Women", image: "/categories/women.jpg" },
-    { id: 1, title: "Men", image: "/categories/men.jpg" },
-    { id: 7, title: "Kids", image: "/categories/kids.jpg" },
-    { id: 4, title: "Sports", image: "/categories/sports.png" },
-    { id: 3, title: "Beauty", image: "/categories/beauty.png" },
-    { id: 9, title: "Electronics", image: "/categories/electronics.png" },
-  ];
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    api
+      .get("/categories/public")
+      .then((res) => {
+        setCategories(res.data);
+        setError(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load categories:", err);
+        setError(true);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-8 text-center">
+        <div className="flex justify-center gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="flex flex-col items-center">
+              {/* Reduced skeleton size */}
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-gray-200 animate-pulse" />
+              <div className="mt-3 h-3 w-14 bg-gray-200 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-12 text-center text-red-600 font-bold">
+        Failed to load categories. Please try again later.
+      </section>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <section className="py-12 text-center text-genz-muted font-bold">
+        No categories available.
+      </section>
+    );
+  }
 
   return (
-    <section className="bg-genz-bg py-8 md:py-12 px-4 sm:px-6 md:px-8">
+    <section className="bg-genz-bg py-6 md:py-10 px-4 sm:px-6 md:px-8">
       <div className="max-w-7xl mx-auto">
-          <div className="flex flex-nowrap overflow-x-auto gap-8 md:gap-14 lg:gap-20 pb-6 no-scrollbar snap-x scroll-smooth">
+        {/* Adjusted gaps for smaller items */}
+        <div className="flex flex-nowrap overflow-x-auto gap-6 md:gap-10 lg:gap-12 pb-4 no-scrollbar snap-x scroll-smooth">
           {categories.map((c) => (
             <Link
-              key={c.title}
+              key={c.id}
               href={`/all-products?categoryId=${c.id}`}
               className="flex flex-col items-center group cursor-pointer flex-shrink-0 snap-center"
             >
-              {/* CIRCULAR IMAGE */}
-              <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full overflow-hidden bg-genz-card border-[3px] border-genz-border group-hover:border-genz-accent transition-all duration-500 shadow-sm group-hover:shadow-[0_20px_50px_rgba(139,92,246,0.15)]">
-                <img
-                  src={c.image}
-                  alt={c.title}
-                  className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700 ease-out"
-                />
-                <div className="absolute inset-0 bg-genz-ink/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              {/* IMAGE: REDUCED SIZE 
+                  Mobile: 20x20 (w-20 h-20)
+                  Desktop: 28x28 (md:w-28 md:h-28)
+              */}
+              <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden bg-genz-card border-2 border-genz-border group-hover:border-genz-accent transition-all duration-500 shadow-sm">
+                {c.image ? (
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_API_URL}${c.image}`}
+                    alt={c.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-genz-accent/10 text-genz-accent text-xl font-black">${c.name.charAt(0).toUpperCase()}</div>`;
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-genz-accent/10 text-genz-accent text-xl font-black">
+                    {c.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
 
-              {/* LABEL */}
-              <div className="mt-5 text-center">
-                <h3 className="text-xs md:text-sm font-black text-genz-ink uppercase tracking-widest group-hover:text-genz-accent transition-colors">
-                  {c.title}
+              {/* LABEL: Adjusted margin and font size */}
+              <div className="mt-3 text-center">
+                <h3 className="text-[10px] md:text-xs font-black text-genz-ink uppercase tracking-widest group-hover:text-genz-accent transition-colors">
+                  {c.name}
                 </h3>
-                <div className="mt-2 h-0.5 w-0 bg-genz-accent mx-auto rounded-full group-hover:w-full transition-all duration-300" />
+                <div className="mt-1.5 h-0.5 w-0 bg-genz-accent mx-auto rounded-full group-hover:w-full transition-all duration-300" />
               </div>
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Tailwind Custom Utility Style for hiding scrollbars */}
       <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </section>
   );
 }
-
