@@ -1,3 +1,235 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/app/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import AuthModal from "../auth/AuthModal";
+import { User, Package, LogOut, Edit2, ShieldCheck, Mail, Phone, MapPin, ChevronRight, Plus } from "lucide-react";
+import toast from "react-hot-toast";
+
+export default function ProfilePage() {
+  const { user, logout, setUser } = useAuth();
+  const router = useRouter();
+  const [showAuth, setShowAuth] = useState(false);
+  const [activeTab, setActiveTab] = useState<"account" | "orders" | "addresses">("account");
+
+  if (!user) {
+    return (
+      <div className="py-20 bg-genz-bg min-h-[80vh] flex items-center justify-center px-4">
+        <div className="bg-genz-card p-10 rounded-genz border border-genz-border shadow-xl max-w-md text-center">
+          <div className="w-20 h-20 bg-genz-softAccent rounded-full flex items-center justify-center mx-auto mb-6 text-genz-accent">
+            <User size={40} />
+          </div>
+          <h1 className="text-3xl font-black text-genz-ink mb-3 tracking-tight">Your Profile</h1>
+          <p className="text-genz-muted mb-8 font-medium">Join the club to track orders and manage your details.</p>
+          <button
+            onClick={() => setShowAuth(true)}
+            className="w-full bg-genz-accent hover:brightness-110 text-white font-black py-4 rounded-xl shadow-lg shadow-genz-accent/20 transition-all active:scale-95"
+          >
+            Sign In / Register
+          </button>
+        </div>
+        <AuthModal show={showAuth} onClose={() => setShowAuth(false)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-genz-bg min-h-screen text-genz-ink">
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <header className="mb-10">
+          <h1 className="text-4xl font-black tracking-tighter">My Account</h1>
+          <p className="text-genz-muted font-medium">Manage your settings and order history</p>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* SIDEBAR */}
+          <aside className="space-y-3">
+            <div className="bg-genz-card rounded-genz border border-genz-border p-2 shadow-sm">
+              <SidebarBtn active={activeTab === "account"} onClick={() => setActiveTab("account")} icon={<User size={20} />}>
+                Account Details
+              </SidebarBtn>
+              <SidebarBtn active={activeTab === "orders"} onClick={() => setActiveTab("orders")} icon={<Package size={20} />}>
+                My Orders
+              </SidebarBtn>
+              <SidebarBtn active={activeTab === "addresses"} onClick={() => setActiveTab("addresses")} icon={<MapPin size={20} />}>
+                Addresses
+              </SidebarBtn>
+            </div>
+
+            <button
+              onClick={() => { logout(); router.push("/"); }}
+              className="w-full flex items-center gap-3 px-5 py-4 rounded-genz text-red-500 hover:bg-red-50 font-bold transition-all border border-transparent active:scale-95"
+            >
+              <LogOut size={20} />
+              Logout
+            </button>
+          </aside>
+
+          {/* CONTENT SECTION */}
+          <section className="md:col-span-3">
+            {activeTab === "account" && <AccountDetails user={user} setUser={setUser} />}
+            {activeTab === "orders" && <OrdersShortcut />}
+            {activeTab === "addresses" && <AddressManager />}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- ACCOUNT DETAILS ---------------- */
+
+function AccountDetails({ user, setUser }: any) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: user.name || "", email: user.email || "" });
+  const [loading, setLoading] = useState(false);
+
+  const saveProfile = async () => {
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      return toast.error("Invalid email address");
+    }
+
+    try {
+      setLoading(true);
+      const res = await api.patch("/users/profile", form);
+      setUser(res.data.user);
+      setEditing(false);
+      toast.success("Profile updated!");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-genz-card rounded-genz border border-genz-border shadow-sm overflow-hidden">
+      <div className="p-8 border-b border-genz-border flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+            <ShieldCheck size={24} />
+          </div>
+          <h2 className="text-xl font-black">Security Settings</h2>
+        </div>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-2 bg-genz-bg px-4 py-2 rounded-xl hover:bg-genz-border font-bold text-sm transition-all"
+          >
+            <Edit2 size={14} /> Edit
+          </button>
+        )}
+      </div>
+
+      <div className="p-8 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <ProfileField
+            label="Full Name"
+            value={form.name}
+            editing={editing}
+            onChange={(v: any) => setForm({ ...form, name: v })}
+            placeholder="Your name"
+          />
+          <ProfileField
+            label="Email Address"
+            value={form.email}
+            editing={editing}
+            onChange={(v: any) => setForm({ ...form, email: v })}
+            placeholder="Email"
+            type="email"
+          />
+          <div className="opacity-60">
+            <p className="text-[10px] font-black uppercase text-genz-muted mb-2 tracking-widest">Phone Number</p>
+            <p className="font-bold text-lg flex items-center gap-2">
+              {user.phone} <span className="text-[10px] bg-genz-bg px-2 py-0.5 rounded-full">Locked</span>
+            </p>
+          </div>
+        </div>
+
+        {editing && (
+          <div className="pt-6 border-t border-genz-border flex gap-4">
+            <button
+              onClick={saveProfile}
+              disabled={loading}
+              className="bg-genz-ink text-white px-8 py-3 rounded-xl font-black disabled:opacity-50"
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
+            <button
+              onClick={() => { setForm({ name: user.name, email: user.email }); setEditing(false); }}
+              className="px-8 py-3 rounded-xl font-bold bg-genz-bg"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- SHARED COMPONENTS ---------------- */
+
+function ProfileField({ label, value, editing, onChange, placeholder, type = "text" }: any) {
+  return (
+    <div>
+      <p className="text-[10px] font-black uppercase text-genz-muted mb-2 tracking-widest">{label}</p>
+      {editing ? (
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full border-2 border-genz-border rounded-xl px-4 py-3 focus:border-genz-accent outline-none transition-all font-bold"
+        />
+      ) : (
+        <p className="font-bold text-lg">{value || "Not set"}</p>
+      )}
+    </div>
+  );
+}
+
+function SidebarBtn({ active, children, icon, ...props }: any) {
+  return (
+    <button
+      {...props}
+      className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black transition-all mb-1 ${
+        active
+          ? "bg-genz-ink text-white shadow-md"
+          : "text-genz-muted hover:bg-genz-bg"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        {icon}
+        {children}
+      </div>
+      <ChevronRight size={16} className={active ? "opacity-100" : "opacity-0"} />
+    </button>
+  );
+}
+
+function OrdersShortcut() {
+  const router = useRouter();
+  return (
+    <div className="bg-genz-card rounded-genz border border-genz-border p-10 text-center shadow-sm">
+      <div className="w-20 h-20 bg-genz-softAccent text-genz-accent rounded-full flex items-center justify-center mx-auto mb-6">
+        <Package size={36} />
+      </div>
+      <h2 className="text-2xl font-black mb-2">Order History</h2>
+      <p className="text-genz-muted font-medium mb-8">Check the status of your packages and past drops.</p>
+      <button 
+        onClick={() => router.push("/orders")}
+        className="bg-genz-accent text-white px-10 py-4 rounded-xl font-black shadow-lg shadow-genz-accent/20 active:scale-95"
+      >
+        View All Orders
+      </button>
+    </div>
+  );
+}
+
+// ... AddressManager and AddressForm would follow similar styling logic (rounded-genz, font-black, genz-accent)
 function AddressManager() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
