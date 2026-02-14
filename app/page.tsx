@@ -23,11 +23,47 @@ export default function HomePage() {
   const applyFilters = async (filter: any) => {
     try {
       const params: any = {};
-      if (filter.typeId?.length) params.typeId = filter.typeId;
-      if (filter.subtypeId?.length) params.subtypeId = filter.subtypeId;
-      if (filter.sort) params.sort = filter.sort;
+
+      if (filter.typeId?.length) {
+        params.typeId = filter.typeId.join(",");
+      }
+
+      if (filter.subtypeId?.length) {
+        params.subtypeId = filter.subtypeId.join(",");
+      }
+
+      if (filter.minPrice !== undefined) {
+        params.minPrice = filter.minPrice;
+      }
+
+      if (filter.maxPrice !== undefined) {
+        params.maxPrice = filter.maxPrice;
+      }
+
+      if (filter.color?.length) {
+        params.color = filter.color.join(",");
+      }
+
+      if (filter.season?.length) {
+        params.season = filter.season.join(",");
+      }
+
+      if (filter.occasion?.length) {
+        params.occasion = filter.occasion.join(",");
+      }
+
+      if (filter.stock) {
+        params.stock = filter.stock;
+      }
+
+      if (filter.sort && filter.sort !== "relevance") {
+        params.sort = filter.sort;
+      }
+
+      console.log("🔍 Applying filters:", params);
 
       const res = await api.get("/products", { params });
+
       setProducts(res.data.products || []);
       setHasFiltered(true);
     } catch (err) {
@@ -44,46 +80,61 @@ export default function HomePage() {
       .catch(() => setSections([]));
   }, []);
 
+  // ✅ Organize sections by type
   const banners = sections.filter((s) => s.type === "BANNER");
   const collections = sections.filter((s) => s.type === "COLLECTION");
   const productSections = sections.filter((s) => s.type === "PRODUCT_LIST");
   const textSections = sections.filter((s) => s.type === "TEXT");
 
+  // ✅ Distribute banners across page positions
+  const banner1 = banners[0]; // Before Trending
+  const banner2 = banners[1]; // Before New Arrivals
+  const banner3 = banners[2]; // After Top Categories
+  const remainingBanners = banners.slice(3); // Any extra banners go at the end
+
   return (
-    /* Unified Brand Background */
     <div className="w-full bg-genz-bg min-h-screen font-sans">
       
-      {/* 1. HERO CAROUSEL: High-impact entry point */}
+      {/* 1. HERO CAROUSEL */}
       <HeroCarousel />
 
-      {/* 2. CATEGORY QUICK-NAV: Essential for mobile-first discovery */}
+      {/* 2. CATEGORY QUICK-NAV */}
       <CategoryGrid />
 
-      {/* 3. TRENDING NOW: Bouncy, interactive horizontal scroll */}
+      {/* ✅ BANNER POSITION 1: Before Trending */}
+      {banner1 && <BannerSection banners={[banner1]} />}
+
+      {/* 3. TRENDING NOW */}
       <TrendingNow />
 
-      {/* 4. DATABASE BANNERS: High-contrast promotional breaks */}
-      {banners.length > 0 && (
-        <BannerSection banners={banners} />
-      )}
+      {/* ✅ BANNER POSITION 2: Before New Arrivals */}
+      {banner2 && <BannerSection banners={[banner2]} />}
 
-      {/* 5. TOP CATEGORIES: Bento-grid style curated blocks */}
+      {/* 4. TOP CATEGORIES */}
       <TopCategories />
 
-      {/* 6. COLLECTION GRID: Minimalist series discovery */}
+      {/* ✅ BANNER POSITION 3: After Top Categories */}
+      {banner3 && <BannerSection banners={[banner3]} />}
+
+      {/* 5. COLLECTION GRID */}
       {collections.length > 0 && (
         <CollectionGridSection collections={collections} />
       )}
 
-      {/* 7. NEW ARRIVALS: Grid of high-heat items */}
+      {/* 6. NEW ARRIVALS */}
       <NewArrivals />
 
-      {/* 8. DYNAMIC PRODUCT LISTS: Custom sliders from backend */}
+      {/* 7. DYNAMIC PRODUCT LISTS */}
       {productSections.map((section) => (
         <ProductSliderSection key={section.id} section={section} />
       ))}
 
-      {/* 9. MAIN SHOPPING AREA: Utility-focused with Gen Z Filter sidebar */}
+      {/* ✅ REMAINING BANNERS: If admin added 4+ banners */}
+      {remainingBanners.length > 0 && (
+        <BannerSection banners={remainingBanners} />
+      )}
+
+      {/* 8. MAIN SHOPPING AREA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-20">
         <div className="mb-12">
           <p className="text-genz-accent font-black text-xs uppercase tracking-[0.3em] mb-2">Personalized</p>
@@ -93,14 +144,12 @@ export default function HomePage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-12">
-          {/* Aside: Sticky Filter for better UX */}
           <aside className="w-full lg:w-1/4 lg:sticky lg:top-24 h-fit">
             <div className="bg-white border border-genz-border rounded-genz p-6 shadow-sm">
               <HomeFilter onFilter={applyFilters} />
             </div>
           </aside>
 
-          {/* Main Grid: Clean, balanced columns */}
           <main className="w-full lg:w-3/4">
             {products.length > 0 ? (
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
@@ -119,12 +168,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 10. SEO TEXT BLOCKS: Minimalist information cards */}
+      {/* 9. SEO TEXT BLOCKS */}
       {textSections.map((section) => (
         <TextBlockSection key={section.id} section={section} />
       ))}
 
-      {/* Spacer for Footer alignment */}
       <div className="pb-20" />
     </div>
   );
