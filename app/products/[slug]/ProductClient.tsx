@@ -165,167 +165,162 @@ export default function ProductClient({ product }: any) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 lg:py-12">
-  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
-    {/* LEFT: IMAGES */}
-    <div className="lg:col-span-5 sticky top-24">
-      <ProductImages images={activeImages} />
-    </div>
+        {/* LEFT: IMAGES */}
+        <div className="lg:col-span-5 sticky top-24">
+          <ProductImages images={activeImages} />
+        </div>
 
-    {/* RIGHT: DETAILS */}
-    <div className="lg:col-span-7 flex flex-col space-y-8">
-      
-      {/* HEADER SECTION */}
-      <div className="space-y-3">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-genz-accent">
-          {product.category?.name}
-        </p>
-        <h1 className="text-2xl md:text-3xl font-black text-genz-ink leading-tight uppercase tracking-tighter">
-          {product.title}
-        </h1>
+        {/* RIGHT: DETAILS */}
+        <div className="lg:col-span-7 flex flex-col space-y-8">
+          
+          {/* HEADER SECTION */}
+          <div className="space-y-3">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-genz-accent">
+              {product.category?.name}
+            </p>
+            <h1 className="text-2xl md:text-3xl font-black text-genz-ink leading-tight uppercase tracking-tighter">
+              {product.title}
+            </h1>
 
-        {/* HIDE RATINGS IF 0 */}
-        {avg !== null && avg > 0 && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
-              {avg.toFixed(1)} <Star size={12} className="ml-1 fill-genz-accent text-genz-accent" />
+            {/* HIDE RATINGS IF 0 */}
+            {avg !== null && avg > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
+                  {avg.toFixed(1)} <Star size={12} className="ml-1 fill-genz-accent text-genz-accent" />
+                </div>
+                <span className="text-xs font-bold text-genz-muted uppercase tracking-widest">
+                  {reviews.length} Ratings
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* PRICE SECTION */}
+          <div className="space-y-1">
+            <div className="flex items-baseline gap-4">
+              <span className="text-4xl font-black text-genz-ink tracking-tighter">
+                ₹{displayPricing.sellingPrice.toLocaleString()}
+              </span>
+              {displayPricing.hasDiscount && (
+                <>
+                  <span className="text-xl line-through text-genz-muted opacity-50 font-bold">
+                    ₹{displayPricing.mrp.toLocaleString()}
+                  </span>
+                  <span className="text-xl font-black text-genz-accent uppercase">
+                    {displayPricing.discountPercent}% OFF
+                  </span>
+                </>
+              )}
             </div>
-            <span className="text-xs font-bold text-genz-muted uppercase tracking-widest">
-              {reviews.length} Ratings
+            {displayPricing.hasDiscount && (
+              <p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
+                You save ₹{displayPricing.discountAmount.toLocaleString()}
+              </p>
+            )}
+          </div>
+
+          {/* STOCK BADGE */}
+          <div>
+            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+              isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+            }`}>
+              {isOutOfStock ? "Out of Stock" : `In Stock · ${displayStock} left`}
             </span>
           </div>
-        )}
-      </div>
 
-      {/* PRICE SECTION */}
-      <div className="space-y-1">
-        <div className="flex items-baseline gap-4">
-          <span className="text-4xl font-black text-genz-ink tracking-tighter">
-            ₹{displayPricing.sellingPrice.toLocaleString()}
-          </span>
-          {displayPricing.hasDiscount && (
-            <>
-              <span className="text-xl line-through text-genz-muted opacity-50 font-bold">
-                ₹{displayPricing.mrp.toLocaleString()}
-              </span>
-              <span className="text-xl font-black text-genz-accent uppercase">
-                {displayPricing.discountPercent}% OFF
-              </span>
-            </>
-          )}
-        </div>
-        {displayPricing.hasDiscount && (
-          <p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
-            You save ₹{displayPricing.discountAmount.toLocaleString()}
-          </p>
-        )}
-      </div>
-
-      {/* STOCK BADGE */}
-      <div>
-        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-          isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
-        }`}>
-          {isOutOfStock ? "Out of Stock" : `In Stock · ${displayStock} left`}
-        </span>
-      </div>
-
-      {/* VARIANT SELECTOR */}
-      <div className="py-4 border-y border-genz-border">
-        <ProductVariantSelector
-          product={product}
-          selectedColor={selectedColor}
-          selectedSize={selectedSize}
-          baseUrl={baseUrl}
-          onColorChange={(color: string | null) => {
-            setSelectedColor(color);
-            setSelectedSize(null);
-          }}
-          onSizeChange={setSelectedSize}
-        />
-      </div>
-
-      {/* ACTION BUTTON */}
-      <div className="pt-2">
-            <AddToCartButton
-  productId={product.id}
-  stock={displayStock}
-  sizeId={activeSKU?.id}
-  selectedColor={selectedColor}
-  hasVariants={skus.length > 0}
-  hasSizes={requiresSize}
-  disabled={isOutOfStock || (requiresSize && !selectedSize)}
-/>
-      </div>
-
-      {/* NEW: PRODUCT DETAILS SECTION (Bento Layout) */}
-      <div className="space-y-6 pt-6 border-t border-genz-border">
-        <h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
-          Product Specifications
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* DESCRIPTION CARD */}
-          <div className="md:col-span-2 p-5 bg-genz-bg rounded-genz border border-genz-border">
-            <h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">Description</h3>
-            <p className="text-sm text-genz-ink font-medium leading-relaxed">
-              {product.description || "Minimalist style for the modern wardrobe."}
-            </p>
+          {/* VARIANT SELECTOR */}
+          <div className="py-4 border-y border-genz-border">
+            <ProductVariantSelector
+              product={product}
+              selectedColor={selectedColor}
+              selectedSize={selectedSize}
+              baseUrl={baseUrl}
+              onColorChange={(color: string | null) => {
+                setSelectedColor(color);
+                setSelectedSize(null);
+              }}
+              onSizeChange={setSelectedSize}
+            />
           </div>
 
-          {/* ATTRIBUTES CARD */}
-          <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
-            <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">Technical Specs</h3>
-            <div className="space-y-3 text-xs font-bold uppercase">
-              <div className="flex justify-between border-b border-genz-border pb-2">
-                <span className="text-genz-muted">Category</span>
-                <span>{product.category?.name}</span>
+          {/* ✅ ACTION BUTTON - FIXED: Removed hasVariants and hasSizes props */}
+          <AddToCartButton
+            productId={product.id}
+            stock={displayStock}
+            sizeId={activeSKU?.id}
+            selectedColor={selectedColor}
+            disabled={isOutOfStock || (requiresSize && !selectedSize)}
+          />
+
+          {/* PRODUCT DETAILS SECTION */}
+          <div className="space-y-6 pt-6 border-t border-genz-border">
+            <h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
+              Product Specifications
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* DESCRIPTION CARD */}
+              <div className="md:col-span-2 p-5 bg-genz-bg rounded-genz border border-genz-border">
+                <h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">Description</h3>
+                <p className="text-sm text-genz-ink font-medium leading-relaxed">
+                  {product.description || "Minimalist style for the modern wardrobe."}
+                </p>
               </div>
-              <div className="flex justify-between border-b border-genz-border pb-2">
-                <span className="text-genz-muted">Weight</span>
-                <span>{product.weight || "N/A"}g</span>
+
+              {/* ATTRIBUTES CARD */}
+              <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
+                <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">Technical Specs</h3>
+                <div className="space-y-3 text-xs font-bold uppercase">
+                  <div className="flex justify-between border-b border-genz-border pb-2">
+                    <span className="text-genz-muted">Category</span>
+                    <span>{product.category?.name}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-genz-border pb-2">
+                    <span className="text-genz-muted">Weight</span>
+                    <span>{product.weight || "N/A"}g</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-genz-muted">Season</span>
+                    <span>{product.season || "ALL SEASON"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-genz-muted">Occasion</span>
+                    <span>{product.occasion || "FORMAL"}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-genz-muted">Season</span>
-                <span>{product.season || "ALL SEASON"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-genz-muted">Occasion</span>
-                <span>{product.occasion || "FORMAL"}</span>
+
+              {/* TAGS/INFO CARD */}
+              <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
+                <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">Extras</h3>
+                <div className="space-y-3 text-xs font-bold uppercase">
+                  <div className="flex justify-between border-b border-genz-border pb-2">
+                    <span className="text-genz-muted">Shipping</span>
+                    <span>Calculated at checkout</span>
+                  </div>
+                  <div className="flex justify-between border-b border-genz-border pb-2">
+                    <span className="text-genz-muted">Returns</span>
+                    <span>7 Days Easy Policy</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-genz-muted">Authentic</span>
+                    <span>100% Genuine product</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* TAGS/INFO CARD */}
-          <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
-            <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">Extras</h3>
-            <div className="space-y-3 text-xs font-bold uppercase">
-              <div className="flex justify-between border-b border-genz-border pb-2">
-                <span className="text-genz-muted">Shipping</span>
-                <span>Calculated at checkout</span>
-              </div>
-              <div className="flex justify-between border-b border-genz-border pb-2">
-                <span className="text-genz-muted">Returns</span>
-                <span>7 Days Easy Policy</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-genz-muted">Authentic</span>
-                <span>100% Genuine product</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
+      {/* REVIEWS & RECOMMENDATIONS */}
+      <div className="mt-24 space-y-24">
+        <TrendingNow />
+        <NewArrivals />
+      </div>
     </div>
-  </div>
-
-  {/* REVIEWS & RECOMMENDATIONS */}
-  <div className="mt-24 space-y-24">
-    <TrendingNow />
-    <NewArrivals />
-  </div>
-</div>
   );
 }
-
