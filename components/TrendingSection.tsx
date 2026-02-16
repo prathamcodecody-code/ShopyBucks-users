@@ -15,7 +15,10 @@ export default function TrendingNow() {
     const fetchTrending = async () => {
       try {
         const res = await api.get("/products", {
-          params: { sort: "newest", limit: 4 },
+          params: { 
+            sort: "random", // Set to random to change items on refresh
+            limit: 12       // Increased limit to 12 products
+          },
         });
         const data = res.data?.products ?? res.data ?? [];
         setItems(Array.isArray(data) ? data : []);
@@ -34,7 +37,8 @@ export default function TrendingNow() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className="h-8 w-48 bg-genz-border animate-pulse rounded-full mb-10" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {[1, 2, 3, 4].map((i) => (
+          {/* Increased skeleton count to match the new layout */}
+          {[...Array(8)].map((_, i) => (
             <div key={i} className="space-y-4">
               <div className="aspect-[3/4] bg-genz-border/50 animate-pulse rounded-genz" />
               <div className="h-3 w-3/4 bg-genz-border/50 animate-pulse rounded-full" />
