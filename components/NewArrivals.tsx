@@ -87,9 +87,7 @@ export default function NewArrivals() {
           ) : (
             products.map((p) => (
               <div key={p.id} className="relative transition-transform duration-500 hover:-translate-y-1">
-                <div className="absolute top-2 left-2 z-10 bg-genz-ink text-white text-[8px] font-black px-2 py-0.5 rounded shadow-xl uppercase tracking-tighter">
-                  Drop #1
-                </div>
+                
                 <ProductCard product={p} />
               </div>
             ))
@@ -99,3 +97,4 @@ export default function NewArrivals() {
     </section>
   );
 }
+
