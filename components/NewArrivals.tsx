@@ -22,15 +22,25 @@ export default function NewArrivals() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get("/products?limit=8")
-      .then((res) => {
+    const fetchNewArrivals = async () => {
+      try {
+        const res = await api.get("/products", {
+          params: {
+            sort: "random", // Randomized for fresh content on every refresh
+            limit: 12,      // Increased to 12 products
+          },
+        });
         const data = res.data;
         const list = Array.isArray(data) ? data : Array.isArray(data?.products) ? data.products : [];
         setProducts(list);
-      })
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
+      } catch (error) {
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNewArrivals();
   }, []);
 
   return (
@@ -64,6 +74,7 @@ export default function NewArrivals() {
         {/* GRID CONTAINER: Consistent 2-column mobile, 4-column PC */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {loading ? (
+            // Showing 8 skeletons as a preview for the 12-item grid
             Array.from({ length: 8 }).map((_, i) => (
               <ProductSkeleton key={i} />
             ))
@@ -76,7 +87,6 @@ export default function NewArrivals() {
           ) : (
             products.map((p) => (
               <div key={p.id} className="relative transition-transform duration-500 hover:-translate-y-1">
-                {/* FLOATING "NEW" TAG: Smaller and cleaner */}
                 <div className="absolute top-2 left-2 z-10 bg-genz-ink text-white text-[8px] font-black px-2 py-0.5 rounded shadow-xl uppercase tracking-tighter">
                   Drop #1
                 </div>
