@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import {
   ChevronDown,
@@ -63,10 +63,16 @@ function activeCount(f: FullHomeFilterState): number {
 }
 
 // ─────────────────────────────────────────────
-// SUB-COMPONENT — collapsible section
+// Section — defined OUTSIDE the main component
+// so React never remounts it on parent re-renders
 // ─────────────────────────────────────────────
 
-function Section({ title, count, children, defaultOpen = false }: {
+function Section({
+  title,
+  count,
+  children,
+  defaultOpen = false,
+}: {
   title: string;
   count?: number;
   children: React.ReactNode;
@@ -102,75 +108,132 @@ function Section({ title, count, children, defaultOpen = false }: {
 }
 
 // ─────────────────────────────────────────────
-// MAIN COMPONENT
+// AttributeSection — also outside main render
+// Receives everything as props, no stale closures
 // ─────────────────────────────────────────────
 
-export default function HomeFilter({ onFilter, initialFilters, categories }: HomeFilterProps) {
-  const [data, setData] = useState<FiltersResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [attrSearch, setAttrSearch] = useState<Record<string, string>>({});
-  const [filters, setFilters] = useState<FullHomeFilterState>({
-    sort: "newest",
-    attributes: {},
-    ...initialFilters,
-  });
+function AttributeSection({
+  attr,
+  selected,
+  searchTerm,
+  onToggle,
+  onSearchChange,
+}: {
+  attr: AttributeFilter;
+  selected: string[];
+  searchTerm: string;
+  onToggle: (slug: string, value: string) => void;
+  onSearchChange: (slug: string, term: string) => void;
+}) {
+  const isColor =
+    attr.slug.toLowerCase().includes("color") ||
+    attr.slug.toLowerCase().includes("colour");
 
-  // ✅ Stable string dep — prevents infinite re-render loop
-  const attrsKey = JSON.stringify(filters.attributes);
+  const visibleValues = attr.values.filter(
+    (v) => !searchTerm || v.value.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const fetchFilters = useCallback(async () => {
-    if (!filters.categoryId) { setData(null); setLoading(false); return; }
-    setLoading(true);
-    try {
-      const params: Record<string, any> = { categoryId: filters.categoryId };
-      const attrs = JSON.parse(attrsKey);
-      for (const [slug, values] of Object.entries(attrs)) {
-        if ((values as string[]).length) params[slug] = (values as string[]).join(",");
-      }
-      if (filters.season)   params.season   = filters.season;
-      if (filters.occasion) params.occasion = filters.occasion;
-      const res = await api.get("/products/filters", { params });
-      setData(res.data);
-    } catch (err) {
-      console.error("Filter fetch failed:", err);
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters.categoryId, attrsKey, filters.season, filters.occasion]);
+  return (
+    <Section title={attr.name} count={selected.length}>
+      {attr.values.length > 6 && (
+        <div className="relative mb-3 group">
+          <Search
+            size={12}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-genz-muted group-focus-within:text-genz-accent"
+          />
+          <input
+            type="text"
+            placeholder={`Search ${attr.name.toLowerCase()}...`}
+            value={searchTerm}
+            onChange={(e) => onSearchChange(attr.slug, e.target.value)}
+            className="w-full pl-9 pr-3 py-2 bg-genz-bg border border-genz-border rounded-xl text-[11px] font-bold outline-none focus:border-genz-accent transition-all"
+          />
+        </div>
+      )}
 
-  useEffect(() => { fetchFilters(); }, [fetchFilters]);
+      <div className="space-y-1">
+        {visibleValues.length === 0 ? (
+          <p className="text-xs text-genz-muted px-2">No results</p>
+        ) : (
+          visibleValues.map(({ value, count }) => {
+            const swatch = isColor ? colorSwatch(value) : null;
+            const active = selected.includes(value);
+            return (
+              <label
+                key={value}
+                className={`flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-xl transition-all ${
+                  active ? "bg-orange-50" : "hover:bg-genz-bg"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={() => onToggle(attr.slug, value)}
+                  className="w-4 h-4 rounded border-genz-border text-genz-accent focus:ring-0"
+                />
+                {isColor && (
+                  <span
+                    className="w-4 h-4 rounded-full border border-genz-border shadow-sm"
+                    style={{ backgroundColor: swatch || "#EEE" }}
+                  />
+                )}
+                <span className={`text-xs font-bold flex-1 ${active ? "text-genz-accent" : "text-genz-muted"}`}>
+                  {value}
+                </span>
+                <span className="text-[10px] text-genz-muted opacity-40 font-black">{count}</span>
+              </label>
+            );
+          })
+        )}
+      </div>
 
-  const toggleAttr = (slug: string, value: string) => {
-    setFilters((prev) => {
-      const current = prev.attributes[slug] || [];
-      const next = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
-      return { ...prev, attributes: { ...prev.attributes, [slug]: next } };
-    });
-  };
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-genz-border">
+          {selected.map((v) => (
+            <span
+              key={v}
+              className="inline-flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full font-bold"
+            >
+              {v}
+              <button onClick={() => onToggle(attr.slug, v)}><X size={9} /></button>
+            </span>
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
 
-  const reset = () => {
-    const cleared: FullHomeFilterState = {
-      sort: "newest",
-      categoryId: initialFilters?.categoryId,
-      attributes: {},
-    };
-    setFilters(cleared);
-    setAttrSearch({});
-    onFilter(cleared);
-  };
+// ─────────────────────────────────────────────
+// FilterPanel — the actual panel content, also
+// a proper named component defined outside the
+// main component to prevent remount on re-renders
+// ─────────────────────────────────────────────
 
-  const apply = () => { onFilter(filters); setMobileOpen(false); };
-  const filtersActive = activeCount(filters);
+interface FilterPanelProps {
+  filters: FullHomeFilterState;
+  data: FiltersResponse | null;
+  loading: boolean;
+  categories: { id: number; name: string; slug: string }[];
+  attrSearch: Record<string, string>;
+  onCategoryChange: (id: number) => void;
+  onToggleAttr: (slug: string, value: string) => void;
+  onAttrSearchChange: (slug: string, term: string) => void;
+  onPriceChange: (min: number | undefined, max: number | undefined) => void;
+}
 
-  // ─────────────────────────────────────────────
-  // PANEL CONTENT
-  // ─────────────────────────────────────────────
-
-  const PanelContent = () => (
+function FilterPanel({
+  filters,
+  data,
+  loading,
+  categories,
+  attrSearch,
+  onCategoryChange,
+  onToggleAttr,
+  onAttrSearchChange,
+  onPriceChange,
+}: FilterPanelProps) {
+  return (
     <div className="space-y-2">
 
       {/* ── CATEGORY ── */}
@@ -189,7 +252,7 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
               <input
                 type="radio"
                 checked={filters.categoryId === cat.id}
-                onChange={() => setFilters((p) => ({ ...p, categoryId: cat.id, attributes: {} }))}
+                onChange={() => onCategoryChange(cat.id)}
                 className="hidden"
               />
               {filters.categoryId === cat.id && <Check size={14} strokeWidth={3} />}
@@ -212,13 +275,13 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
             <input
               type="range" min={0} max={data?.price.max || 10000}
               value={filters.minPrice || 0}
-              onChange={(e) => setFilters({ ...filters, minPrice: Number(e.target.value) })}
+              onChange={(e) => onPriceChange(Number(e.target.value), filters.maxPrice)}
               className="absolute pointer-events-none appearance-none bg-transparent w-full h-1.5 outline-none slider-thumb"
             />
             <input
               type="range" min={0} max={data?.price.max || 10000}
               value={filters.maxPrice || data?.price.max || 10000}
-              onChange={(e) => setFilters({ ...filters, maxPrice: Number(e.target.value) })}
+              onChange={(e) => onPriceChange(filters.minPrice, Number(e.target.value))}
               className="absolute pointer-events-none appearance-none bg-transparent w-full h-1.5 outline-none slider-thumb"
             />
           </div>
@@ -252,86 +315,125 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
           ))}
         </div>
       ) : (
-        data?.filters?.map((attr) => {
-          const selected      = filters.attributes[attr.slug] || [];
-          const searchTerm    = attrSearch[attr.slug] || "";
-          const isColor       = attr.slug.toLowerCase().includes("color") || attr.slug.toLowerCase().includes("colour");
-          const visibleValues = attr.values.filter(
-            (v) => !searchTerm || v.value.toLowerCase().includes(searchTerm.toLowerCase()),
-          );
-
-          return (
-            <Section key={attr.slug} title={attr.name} count={selected.length}>
-              {attr.values.length > 6 && (
-                <div className="relative mb-3 group">
-                  <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-genz-muted group-focus-within:text-genz-accent" />
-                  <input
-                    type="text"
-                    placeholder={`Search ${attr.name.toLowerCase()}...`}
-                    value={searchTerm}
-                    onChange={(e) => setAttrSearch((p) => ({ ...p, [attr.slug]: e.target.value }))}
-                    className="w-full pl-9 pr-3 py-2 bg-genz-bg border border-genz-border rounded-xl text-[11px] font-bold outline-none focus:border-genz-accent transition-all"
-                  />
-                </div>
-              )}
-
-              {/* ✅ No max-h/overflow — all values shown at full height */}
-              <div className="space-y-1">
-                {visibleValues.length === 0 ? (
-                  <p className="text-xs text-genz-muted px-2">No results</p>
-                ) : (
-                  visibleValues.map(({ value, count }) => {
-                    const swatch = isColor ? colorSwatch(value) : null;
-                    const active = selected.includes(value);
-                    return (
-                      <label
-                        key={value}
-                        className={`flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-xl transition-all ${
-                          active ? "bg-orange-50" : "hover:bg-genz-bg"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={active}
-                          onChange={() => toggleAttr(attr.slug, value)}
-                          className="w-4 h-4 rounded border-genz-border text-genz-accent focus:ring-0"
-                        />
-                        {isColor && (
-                          <span
-                            className="w-4 h-4 rounded-full border border-genz-border shadow-sm"
-                            style={{ backgroundColor: swatch || "#EEE" }}
-                          />
-                        )}
-                        <span className={`text-xs font-bold flex-1 ${active ? "text-genz-accent" : "text-genz-muted"}`}>
-                          {value}
-                        </span>
-                        <span className="text-[10px] text-genz-muted opacity-40 font-black">{count}</span>
-                      </label>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Active chips */}
-              {selected.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-genz-border">
-                  {selected.map((v) => (
-                    <span
-                      key={v}
-                      className="inline-flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full font-bold"
-                    >
-                      {v}
-                      <button onClick={() => toggleAttr(attr.slug, v)}><X size={9} /></button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </Section>
-          );
-        })
+        data?.filters?.map((attr) => (
+          <AttributeSection
+            key={attr.slug}
+            attr={attr}
+            selected={filters.attributes[attr.slug] || []}
+            searchTerm={attrSearch[attr.slug] || ""}
+            onToggle={onToggleAttr}
+            onSearchChange={onAttrSearchChange}
+          />
+        ))
       )}
     </div>
   );
+}
+
+// ─────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────
+
+export default function HomeFilter({ onFilter, initialFilters, categories }: HomeFilterProps) {
+  const [data, setData]           = useState<FiltersResponse | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [attrSearch, setAttrSearch] = useState<Record<string, string>>({});
+  const [filters, setFilters]     = useState<FullHomeFilterState>({
+    sort: "newest",
+    attributes: {},
+    ...initialFilters,
+  });
+
+  // ✅ Always-current ref — callbacks that call onFilter
+  // read from this ref instead of the stale closure value
+  const filtersRef = useRef(filters);
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
+
+  const attrsKey = JSON.stringify(filters.attributes);
+
+  const fetchFilters = useCallback(async () => {
+    if (!filters.categoryId) { setData(null); setLoading(false); return; }
+    setLoading(true);
+    try {
+      const params: Record<string, any> = { categoryId: filters.categoryId };
+      const attrs = JSON.parse(attrsKey);
+      for (const [slug, values] of Object.entries(attrs)) {
+        if ((values as string[]).length) params[slug] = (values as string[]).join(",");
+      }
+      if (filters.season)   params.season   = filters.season;
+      if (filters.occasion) params.occasion = filters.occasion;
+      const res = await api.get("/products/filters", { params });
+      setData(res.data);
+    } catch (err) {
+      console.error("Filter fetch failed:", err);
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters.categoryId, attrsKey, filters.season, filters.occasion]);
+
+  useEffect(() => { fetchFilters(); }, [fetchFilters]);
+
+  // Category — immediately fires onFilter
+  const handleCategoryChange = useCallback((categoryId: number) => {
+    const next: FullHomeFilterState = {
+      ...filtersRef.current,
+      categoryId,
+      attributes: {},
+    };
+    setFilters(next);
+    setAttrSearch({});
+    onFilter(next);
+  }, [onFilter]);
+
+  // ✅ THE CORE FIX: toggleAttr builds the complete next
+  // state inside the functional updater (so it's never
+  // stale), then immediately calls onFilter with it.
+  // This means every checkbox tick fires a product fetch —
+  // no need to press Apply for attributes to work.
+  const toggleAttr = useCallback((slug: string, value: string) => {
+    setFilters((prev) => {
+      const current  = prev.attributes[slug] || [];
+      const nextVals = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      const next: FullHomeFilterState = {
+        ...prev,
+        attributes: { ...prev.attributes, [slug]: nextVals },
+      };
+      // setTimeout(0) defers until after React commits the state update,
+      // so onFilter always receives the correct next state object.
+      setTimeout(() => onFilter(next), 0);
+      return next;
+    });
+  }, [onFilter]);
+
+  const handleAttrSearchChange = useCallback((slug: string, term: string) => {
+    setAttrSearch((p) => ({ ...p, [slug]: term }));
+  }, []);
+
+  const handlePriceChange = useCallback((min: number | undefined, max: number | undefined) => {
+    setFilters((p) => ({ ...p, minPrice: min, maxPrice: max }));
+  }, []);
+
+  const reset = useCallback(() => {
+    const cleared: FullHomeFilterState = {
+      sort: "newest",
+      categoryId: initialFilters?.categoryId,
+      attributes: {},
+    };
+    setFilters(cleared);
+    setAttrSearch({});
+    onFilter(cleared);
+  }, [initialFilters?.categoryId, onFilter]);
+
+  const apply = useCallback(() => {
+    onFilter(filtersRef.current);
+    setMobileOpen(false);
+  }, [onFilter]);
+
+  const filtersActive = activeCount(filters);
 
   // ─────────────────────────────────────────────
   // RENDER
@@ -364,9 +466,18 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
                 <X size={20} />
               </button>
             </div>
-            {/* Mobile scrolls — screen space is limited on phones */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              <PanelContent />
+              <FilterPanel
+                filters={filters}
+                data={data}
+                loading={loading}
+                categories={categories}
+                attrSearch={attrSearch}
+                onCategoryChange={handleCategoryChange}
+                onToggleAttr={toggleAttr}
+                onAttrSearchChange={handleAttrSearchChange}
+                onPriceChange={handlePriceChange}
+              />
             </div>
             <div className="border-t border-genz-border px-6 py-5 bg-white flex gap-4">
               <button onClick={reset} className="flex-1 py-4 rounded-full font-black text-[10px] uppercase border-2 border-genz-border text-genz-muted">
@@ -381,7 +492,6 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
       )}
 
       {/* ── DESKTOP PANEL ── */}
-      {/* ✅ No fixed height, no overflow — expands to full natural height */}
       <div className="hidden lg:block">
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-genz-border">
           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-genz-ink">Filters</h3>
@@ -395,7 +505,17 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
           )}
         </div>
 
-        <PanelContent />
+        <FilterPanel
+          filters={filters}
+          data={data}
+          loading={loading}
+          categories={categories}
+          attrSearch={attrSearch}
+          onCategoryChange={handleCategoryChange}
+          onToggleAttr={toggleAttr}
+          onAttrSearchChange={handleAttrSearchChange}
+          onPriceChange={handlePriceChange}
+        />
 
         <div className="mt-6 pt-6 border-t border-genz-border">
           <button
