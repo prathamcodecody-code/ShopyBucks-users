@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET(
-  _req: Request,
+  request: Request,
   { params }: { params: { page: string } }
 ) {
   const page = Number(params.page);
@@ -10,35 +10,39 @@ export async function GET(
     return new NextResponse("Invalid page", { status: 400 });
   }
 
-  const base = "https://www.shopybucks.com";
+  // Example pagination
+  const PAGE_SIZE = 5000;
 
-  const res = await fetch(
-    `https://apiv2.shopybucks.com/products/sitemap?page=${page}`,
+  // TODO: Replace with DB/API fetch
+  const products = await fetch(
+    `${process.env.API_URL}/products/sitemap?page=${page}&limit=${PAGE_SIZE}`,
     { cache: "no-store" }
-  );
+  ).then(res => res.json());
 
-  if (!res.ok) {
-    return new NextResponse("Failed to fetch products", { status: 500 });
+  if (!products || products.length === 0) {
+    return new NextResponse(null, { status: 404 });
   }
 
-  const { products } = await res.json();
+  const urls = products
+    .map(
+      (p: any) => `
+  <url>
+    <loc>https://www.shopybucks.com/product/${p.slug}</loc>
+    <lastmod>${new Date(p.updatedAt).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`
+    )
+    .join("");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${products
-  .map(
-    (p: any) => `
-  <url>
-    <loc>${base}/product/${p.slug}</loc>
-    <lastmod>${new Date(p.updatedAt).toISOString()}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>`
-  )
-  .join("")}
+${urls}
 </urlset>`;
 
   return new NextResponse(xml, {
-    headers: { "Content-Type": "application/xml" },
+    headers: {
+      "Content-Type": "application/xml",
+    },
   });
 }
