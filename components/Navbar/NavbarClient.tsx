@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef } from "react"; // Added useRef
+import { useState, useRef } from "react";
 import { FiSearch, FiMenu, FiChevronDown } from "react-icons/fi";
 import { HiOutlineShoppingBag, HiOutlineShoppingCart, HiOutlineUser } from "react-icons/hi2";
 import { LuStore } from "react-icons/lu"; 
@@ -20,7 +20,6 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   
-  // --- HOVER DELAY LOGIC ---
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = (id: number) => {
@@ -29,7 +28,6 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
   };
 
   const handleMouseLeave = () => {
-    // 300ms delay gives users time to move mouse to the menu
     timeoutRef.current = setTimeout(() => {
       setActiveCategory(null);
     }, 300); 
@@ -53,7 +51,11 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
       {/* SECTION 1: TOP NAV - STICKY */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-[60] shadow-sm">
         <div className="max-w-[1244px] mx-auto px-4 h-16 md:h-20 flex items-center justify-between gap-4 md:gap-8">
-          <div className="flex items-center gap-4 shrink-0">
+          
+          {/* LEFT SECTION: Become Seller + Menu + Logo */}
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
+            
+
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 xl:hidden hover:bg-gray-100 rounded-lg transition-colors">
               <FiMenu size={24} />
             </button>
@@ -64,6 +66,7 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
             </Link>
           </div>
 
+          {/* CENTER: SEARCH */}
           <div className="hidden md:flex flex-1 max-w-2xl items-center bg-[#F0F5FF] border border-transparent focus-within:bg-white focus-within:border-gray-300 rounded-md px-4 py-2 transition-all">
             <FiSearch className="text-[#2874f0] shrink-0" size={20} />
             <input
@@ -75,6 +78,7 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
             />
           </div>
 
+          {/* RIGHT SECTION: USER & CART */}
           <div className="flex items-center gap-4 lg:gap-8 shrink-0">
             <div className="relative group cursor-pointer" onMouseEnter={() => setShowProfileMenu(true)} onMouseLeave={() => setShowProfileMenu(false)}>
               <div onClick={!user ? openAuth : undefined} className={`flex items-center gap-1 px-3 py-1.5 rounded-md transition-all ${!user ? 'bg-white border border-gray-200 hover:bg-[#2874f0] hover:text-white group' : ''}`}>
@@ -115,6 +119,16 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
               <span className="hidden lg:block text-sm uppercase tracking-tighter">Cart</span>
             </Link>
           </div>
+          {/* NEW: Become a Seller Button */}
+            <Link 
+              href="https://seller.shopybucks.com/auth/login" 
+              className="hidden sm:flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors group mr-2"
+            >
+              <LuStore className="text-[#2874f0]" size={20} />
+              <span className="text-[12px] font-bold uppercase tracking-tight text-gray-700 group-hover:text-[#2874f0]">
+                Become a Seller
+              </span>
+            </Link>
         </div>
       </div>
 
@@ -142,7 +156,6 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
             ))}
           </div>
 
-          {/* MEGAMENU CONTAINER */}
           <div 
             onMouseEnter={() => {
                 if (timeoutRef.current) clearTimeout(timeoutRef.current);
