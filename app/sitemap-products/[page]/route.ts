@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   _req: NextRequest,
-  context: { params: { page: string } }
+  context: { params: Promise<{ page: string }> }
 ) {
-  const page = Number(context.params.page);
+  const params = await context.params;
+  const page = Number(params.page);
   const LIMIT = 5000;
 
   if (!page || page < 1) {
@@ -12,7 +13,7 @@ export async function GET(
   }
 
   const res = await fetch(
-    `${process.env.API_URL}/products/sitemap?page=${page}&limit=${LIMIT}`,
+    `${process.env.NEXT_PUBLIC_API_URL}/products/sitemap?page=${page}&limit=${LIMIT}`,
     { cache: "no-store" }
   );
 
