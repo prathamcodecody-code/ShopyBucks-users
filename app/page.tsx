@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import HeroCarousel from "@/components/HeroCarousel";
 import CategoryGrid from "@/components/CategoryGrid";
 import TrendingNow from "@/components/TrendingSection";
 import NewArrivals from "@/components/NewArrivals";
-import HomeFilter from "@/components/Home/HomeFilter";
+import HomeFilter, { FullHomeFilterState } from "@/components/Home/HomeFilter";
 import ProductCard from "@/components/ProductCard";
 import TopCategories from "@/components/TopCategories";
 import { api } from "@/lib/api";
@@ -15,64 +15,91 @@ import CollectionGridSection from "@/components/ui/CollectionGridSection";
 import ProductSliderSection from "@/components/ui/ProductSliderSection";
 import TextBlockSection from "@/components/ui/TextBlockSection";
 
+// ─────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────
+
+type Category = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
+export interface HomeFilterState {
+  sort?:     string;
+  minPrice?: number;
+  maxPrice?: number;
+  stock?:    "in" | "out";
+  season?:   string;
+  occasion?: string;
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+
+const DEFAULT_CATEGORY_ID = 1;
+
+function buildParams(filter: FullHomeFilterState): Record<string, any> {
+  const p: Record<string, any> = { limit: 12 };
+
+  // ✅ categoryId included so category filter actually hits the backend
+  if (filter.categoryId)                       p.categoryId = filter.categoryId;
+  if (filter.sort && filter.sort !== "newest") p.sort       = filter.sort;
+  if (filter.minPrice)                         p.minPrice   = filter.minPrice;
+  if (filter.maxPrice)                         p.maxPrice   = filter.maxPrice;
+  if (filter.stock)                            p.stock      = filter.stock;
+  if (filter.season)                           p.season     = filter.season;
+  if (filter.occasion)                         p.occasion   = filter.occasion;
+
+  for (const [slug, values] of Object.entries(filter.attributes || {})) {
+    if (values.length) p[slug] = values.join(",");
+  }
+
+  return p;
+}
+
+// ─────────────────────────────────────────────
+// PAGE
+// ─────────────────────────────────────────────
+
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [hasFiltered, setHasFiltered] = useState(false);
+  const [loading,  setLoading]  = useState(true);
   const [sections, setSections] = useState<any[]>([]);
 
-  const applyFilters = async (filter: any) => {
+  // ✅ Explicitly typed so TypeScript doesn't infer never[]
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Fetch categories for the filter sidebar
+  useEffect(() => {
+    api
+      .get("/categories")
+      .then((res) => setCategories(res.data))
+      .catch(() => setCategories([]));
+  }, []);
+
+  // ── Fetch products ────────────────────────
+  const fetchProducts = useCallback(async (params: Record<string, any> = { limit: 12 }) => {
+    setLoading(true);
     try {
-      const params: any = {};
-
-      if (filter.typeId?.length) {
-        params.typeId = filter.typeId.join(",");
-      }
-
-      if (filter.subtypeId?.length) {
-        params.subtypeId = filter.subtypeId.join(",");
-      }
-
-      if (filter.minPrice !== undefined) {
-        params.minPrice = filter.minPrice;
-      }
-
-      if (filter.maxPrice !== undefined) {
-        params.maxPrice = filter.maxPrice;
-      }
-
-      if (filter.color?.length) {
-        params.color = filter.color.join(",");
-      }
-
-      if (filter.season?.length) {
-        params.season = filter.season.join(",");
-      }
-
-      if (filter.occasion?.length) {
-        params.occasion = filter.occasion.join(",");
-      }
-
-      if (filter.stock) {
-        params.stock = filter.stock;
-      }
-
-      if (filter.sort && filter.sort !== "relevance") {
-        params.sort = filter.sort;
-      }
-
-      console.log("🔍 Applying filters:", params);
-
       const res = await api.get("/products", { params });
-
       setProducts(res.data.products || []);
-      setHasFiltered(true);
-    } catch (err) {
-      console.error("Filter error", err);
+    } catch {
       setProducts([]);
-      setHasFiltered(true);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
+  // ✅ Initial load uses buildParams so categoryId: 1 is sent from the start
+  useEffect(() => {
+    fetchProducts(
+      buildParams({ sort: "newest", attributes: {}, categoryId: DEFAULT_CATEGORY_ID })
+    );
+  }, [fetchProducts]);
+
+  // ── Fetch homepage CMS sections ───────────
   useEffect(() => {
     api
       .get("/homepage", { params: { target: "WEB" } })
@@ -80,40 +107,47 @@ export default function HomePage() {
       .catch(() => setSections([]));
   }, []);
 
-  // ✅ Organize sections by type
-  const banners = sections.filter((s) => s.type === "BANNER");
-  const collections = sections.filter((s) => s.type === "COLLECTION");
+  // ── Filter handler ─────────────────────────
+  const applyFilters = (filter: FullHomeFilterState) => {
+    fetchProducts(buildParams(filter));
+  };
+
+  // ── Section bucketing ─────────────────────
+  const banners         = sections.filter((s) => s.type === "BANNER");
+  const collections     = sections.filter((s) => s.type === "COLLECTION");
   const productSections = sections.filter((s) => s.type === "PRODUCT_LIST");
-  const textSections = sections.filter((s) => s.type === "TEXT");
+  const textSections    = sections.filter((s) => s.type === "TEXT");
 
-  // ✅ Distribute banners across page positions
-  const banner1 = banners[0]; // Before Trending
-  const banner2 = banners[1]; // Before New Arrivals
-  const banner3 = banners[2]; // After Top Categories
-  const remainingBanners = banners.slice(3); // Any extra banners go at the end
+  const banner1          = banners[0];
+  const banner2          = banners[1];
+  const banner3          = banners[2];
+  const remainingBanners = banners.slice(3);
 
+  // ─────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────
   return (
     <div className="w-full bg-genz-bg min-h-screen font-sans">
-      
+
       {/* 1. HERO CAROUSEL */}
       <HeroCarousel />
 
       {/* 2. CATEGORY QUICK-NAV */}
       <CategoryGrid />
 
-      {/* ✅ BANNER POSITION 1: Before Trending */}
+      {/* BANNER 1 */}
       {banner1 && <BannerSection banners={[banner1]} />}
 
       {/* 3. TRENDING NOW */}
       <TrendingNow />
 
-      {/* ✅ BANNER POSITION 2: Before New Arrivals */}
+      {/* BANNER 2 */}
       {banner2 && <BannerSection banners={[banner2]} />}
 
       {/* 4. TOP CATEGORIES */}
       <TopCategories />
 
-      {/* ✅ BANNER POSITION 3: After Top Categories */}
+      {/* BANNER 3 */}
       {banner3 && <BannerSection banners={[banner3]} />}
 
       {/* 5. COLLECTION GRID */}
@@ -129,7 +163,7 @@ export default function HomePage() {
         <ProductSliderSection key={section.id} section={section} />
       ))}
 
-      {/* ✅ REMAINING BANNERS: If admin added 4+ banners */}
+      {/* REMAINING BANNERS */}
       {remainingBanners.length > 0 && (
         <BannerSection banners={remainingBanners} />
       )}
@@ -137,21 +171,39 @@ export default function HomePage() {
       {/* 8. MAIN SHOPPING AREA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-20">
         <div className="mb-12">
-          <p className="text-genz-accent font-black text-xs uppercase tracking-[0.3em] mb-2">Personalized</p>
+          <p className="text-genz-accent font-black text-xs uppercase tracking-[0.3em] mb-2">
+            Personalized
+          </p>
           <h2 className="text-3xl md:text-5xl font-black text-genz-ink tracking-tighter uppercase">
             Products <span className="text-genz-accent">For You</span>
           </h2>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-12">
-          <aside className="w-full lg:w-1/4 lg:sticky lg:top-24 h-fit">
-            <div className="bg-white border border-genz-border rounded-genz p-6 shadow-sm">
-              <HomeFilter onFilter={applyFilters} />
+
+          {/* Filter sidebar — full natural height, no scroll container */}
+          <aside className="w-full lg:w-1/4 self-start">
+            <div className="bg-white border border-genz-border rounded-3xl p-6 shadow-sm">
+              <HomeFilter
+                categories={categories}
+                initialFilters={{ categoryId: DEFAULT_CATEGORY_ID, attributes: {} }}
+                onFilter={applyFilters}
+              />
             </div>
           </aside>
 
+          {/* Product grid */}
           <main className="w-full lg:w-3/4">
-            {products.length > 0 ? (
+            {loading ? (
+              <div className="grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-[3/4] rounded-genz bg-gray-100 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : products.length > 0 ? (
               <div className="grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                 {products.map((p) => (
                   <ProductCard key={p.id} product={p} />
@@ -160,8 +212,18 @@ export default function HomePage() {
             ) : (
               <div className="text-center py-24 bg-white border border-dashed border-genz-border rounded-genz">
                 <p className="text-genz-muted font-bold uppercase tracking-widest text-sm">
-                  {hasFiltered ? "No drops match your vibe." : "Use the filters to find your look."}
+                  No drops match your vibe.
                 </p>
+                <button
+                  onClick={() =>
+                    fetchProducts(
+                      buildParams({ sort: "newest", attributes: {}, categoryId: DEFAULT_CATEGORY_ID })
+                    )
+                  }
+                  className="mt-4 text-xs text-genz-accent font-bold underline"
+                >
+                  Reset filters
+                </button>
               </div>
             )}
           </main>
