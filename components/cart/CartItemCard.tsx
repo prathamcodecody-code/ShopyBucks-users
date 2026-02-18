@@ -56,10 +56,12 @@ export default function CartItemCard({
      ✅ DISPLAY VALUES (SKU-AWARE)
   ========================================================= */
 
-  // Image: SKU img → product img
+  // Image priority:
+  // 1. SKU image (now enriched by backend with same-colour fallback)
+  // 2. Product default image (last resort)
   const displayImage = item.productsize?.img1 || item.product.img1;
 
-  // Color: only from SKU
+  // Colour: only from SKU
   const displayColor = item.productsize?.color;
 
   // Size: only from SKU
@@ -158,7 +160,7 @@ export default function CartItemCard({
         {/* BOTTOM SECTION: PRICE & POLICY */}
         <div className="mt-4 flex items-end justify-between border-t border-gray-50 pt-3">
           <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {/* ✅ Final price (after discount) */}
               <span className="text-xl font-black text-amazon-text tracking-tight">
                 ₹{(finalPrice * item.quantity).toLocaleString()}
