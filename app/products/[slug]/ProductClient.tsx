@@ -14,10 +14,20 @@ const IMG_BASE = process.env.NEXT_PUBLIC_API_URL
   : "http://localhost:3030/uploads/products/";
 
 // ─────────────────────────────────────────────
-// TYPE — what the service returns
+// TYPES
 // ─────────────────────────────────────────────
+
+/**
+ * What your backend's computePricing returns inside each SKU:
+ *   sellingPrice  = final price the customer pays (AFTER discount)
+ *   discountedPrice = same as sellingPrice when there IS a discount, null otherwise
+ *   discountLabel  = e.g. "61% off"
+ *
+ * The MRP (before discount) lives on the SKU itself as `sku.price`
+ * (the raw price the seller set before any discount is applied).
+ */
 interface Pricing {
-  sellingPrice: number;
+  sellingPrice: number;        // final/discounted price
   discountedPrice: number | null;
   discountLabel: string | null;
 }
@@ -27,26 +37,78 @@ interface Sku {
   color: string;
   size: string | null;
   stock: number;
-  price: number;
+  price: number;               // ← MRP (before discount)
   img1: string | null;
   img2: string | null;
   img3: string | null;
   pricing: Pricing;
-  finalPrice: number;  // equals pricing.discountedPrice ?? pricing.sellingPrice
+  finalPrice: number;          // = pricing.discountedPrice ?? pricing.sellingPrice
 }
 
+// Derived display shape — always has both final + original price
+interface DisplayPricing {
+  finalPrice: number;
+  originalPrice: number;       // MRP
+  hasDiscount: boolean;
+  discountLabel: string | null;
+  savingsAmount: number;
+}
+
+/** Bulletproof size check — handles null / "" / "null" / "none" etc. */
+function hasRealSize(size: string | null | undefined): boolean {
+  if (size == null) return false;
+  const t = String(size).trim().toLowerCase();
+  return t !== "" && t !== "null" && t !== "none" && t !== "no_size" && t !== "n/a";
+}
+
+/**
+ * Given a SKU (which has both .price = MRP and .pricing = computed pricing),
+ * return a clean DisplayPricing object.
+ */
+function skuToDisplayPricing(sku: Sku): DisplayPricing {
+  const finalPrice = sku.pricing?.discountedPrice ?? sku.pricing?.sellingPrice ?? sku.price;
+  const originalPrice = sku.price;           // raw MRP from seller
+  const hasDiscount = originalPrice > finalPrice;
+
+  return {
+    finalPrice,
+    originalPrice,
+    hasDiscount,
+    discountLabel: sku.pricing?.discountLabel ?? null,
+    savingsAmount: hasDiscount ? originalPrice - finalPrice : 0,
+  };
+}
+
+/** Fallback when we only have the product-level pricing (no SKU selected yet) */
+function productToDisplayPricing(product: any): DisplayPricing {
+  // product.pricing.sellingPrice = discounted final price
+  // product.price                = raw MRP
+  const finalPrice = product.pricing?.sellingPrice ?? product.price;
+  const originalPrice = product.price;
+  const hasDiscount = originalPrice > finalPrice;
+
+  return {
+    finalPrice,
+    originalPrice,
+    hasDiscount,
+    discountLabel: product.pricing?.discountLabel ?? null,
+    savingsAmount: hasDiscount ? originalPrice - finalPrice : 0,
+  };
+}
+
+// ─────────────────────────────────────────────
+// COMPONENT
+// ─────────────────────────────────────────────
 export default function ProductClient({ product }: any) {
-
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedSize,  setSelectedSize]  = useState<Sku | null>(null);
+  const [selectedSize, setSelectedSize] = useState<Sku | null>(null);
 
-  // ── SKUs ───────────────────────────────────
   const skus: Sku[] = useMemo(
     () => (Array.isArray(product?.skus) ? product.skus : []),
     [product?.skus],
   );
 
-  // ── Default to first colour ────────────────
+  // Auto-select first colour on mount
   useEffect(() => {
     if (!selectedColor && skus.length > 0) {
       const firstColor = skus.find((s) => s.color)?.color;
@@ -54,9 +116,9 @@ export default function ProductClient({ product }: any) {
     }
   }, [skus, selectedColor]);
 
-  // ── Reviews ─────────────────────────────────
+  // Reviews
   const [reviews, setReviews] = useState<any[]>([]);
-  const [avg,     setAvg]     = useState<number | null>(null);
+  const [avg, setAvg] = useState<number | null>(null);
 
   useEffect(() => {
     api
@@ -71,31 +133,34 @@ export default function ProductClient({ product }: any) {
       });
   }, [product.id]);
 
-  // ── SKUs matching selected colour ──────────
+  // SKUs for selected colour
   const skusForColor = useMemo(() => {
     if (!selectedColor) return [];
     return skus.filter((s) => s.color === selectedColor);
   }, [skus, selectedColor]);
 
-  // ── Active SKU (colour + size selected) ────
-  const activeSKU = useMemo(() => {
-    if (!selectedColor || !selectedSize) return null;
-    // selectedSize is the full Sku object, so compare by id
-    return skus.find((s) => s.color === selectedColor && s.id === selectedSize.id) || null;
-  }, [skus, selectedColor, selectedSize]);
+  // Does the selected colour have real sizes?
+  const colorHasSizes = useMemo(
+    () => skusForColor.some((s) => hasRealSize(s.size)),
+    [skusForColor],
+  );
 
-  // ── Images ──────────────────────────────────
+  // Active SKU
+  const activeSKU = useMemo(() => {
+    if (!selectedColor) return null;
+    if (!colorHasSizes) return skusForColor[0] ?? null;
+    if (!selectedSize) return null;
+    return skus.find((s) => s.color === selectedColor && s.id === selectedSize.id) ?? null;
+  }, [skus, selectedColor, selectedSize, skusForColor, colorHasSizes]);
+
+  // Images
   const activeImages = useMemo(() => {
-    // Priority 1: Exact SKU selected → use its images
     if (activeSKU) {
       const skuImgs = [activeSKU.img1, activeSKU.img2, activeSKU.img3]
         .filter(Boolean)
         .map((img) => IMG_BASE + img);
       if (skuImgs.length) return skuImgs;
     }
-
-    // Priority 2: Colour selected but exact SKU has no images
-    // → find ANY SKU in the same colour group that has images
     if (selectedColor && skusForColor.length > 0) {
       for (const sku of skusForColor) {
         const skuImgs = [sku.img1, sku.img2, sku.img3]
@@ -104,36 +169,31 @@ export default function ProductClient({ product }: any) {
         if (skuImgs.length) return skuImgs;
       }
     }
-
-    // Priority 3: No colour selected or no SKU images available
-    // → fall back to product-level images
     return [product.img1, product.img2, product.img3, product.img4]
       .filter(Boolean)
       .map((img) => IMG_BASE + img);
   }, [activeSKU, selectedColor, skusForColor, product]);
 
-  // ── Pricing (correct shape) ─────────────────
-  const displayPricing: Pricing = useMemo(() => {
-    // Exact SKU → use its pricing
-    if (activeSKU?.pricing) return activeSKU.pricing;
+  // ─── PRICING ────────────────────────────────────────────────────────────────
+  // Use the active SKU's .price (MRP) + .pricing (computed) for accurate display.
+  // Fall back through: activeSKU → cheapest SKU in colour → product level.
+  const displayPricing: DisplayPricing = useMemo(() => {
+    // 1. Exact SKU selected
+    if (activeSKU) return skuToDisplayPricing(activeSKU);
 
-    // Colour group → lowest finalPrice SKU
+    // 2. Colour selected but no size yet → show cheapest SKU in this colour group
     if (skusForColor.length > 0) {
-      const lowestSKU = skusForColor.reduce((min, s) =>
+      const cheapest = skusForColor.reduce((min, s) =>
         s.finalPrice < min.finalPrice ? s : min,
       );
-      return lowestSKU.pricing;
+      return skuToDisplayPricing(cheapest);
     }
 
-    // Fallback → product-level pricing
-    return product.pricing || {
-      sellingPrice: product.price,
-      discountedPrice: null,
-      discountLabel: null,
-    };
+    // 3. Nothing selected → product-level pricing
+    return productToDisplayPricing(product);
   }, [activeSKU, skusForColor, product]);
 
-  // ── Stock ───────────────────────────────────
+  // Stock
   const displayStock = useMemo(() => {
     if (activeSKU) return activeSKU.stock;
     if (skusForColor.length) return skusForColor.reduce((s, sku) => s + sku.stock, 0);
@@ -142,31 +202,35 @@ export default function ProductClient({ product }: any) {
 
   const isOutOfStock = displayStock <= 0;
 
-  // ── Size requirement (colour-aware) ─────────
-  const requiresSize = useMemo(() => {
-    if (!selectedColor) return false;
-    return skusForColor.some((s) => s.size);
-  }, [skusForColor, selectedColor]);
+  // Cart readiness
+  const requiresVariantSelection = useMemo(() => {
+    if (!selectedColor) return true;
+    if (colorHasSizes && !selectedSize) return true;
+    return false;
+  }, [selectedColor, colorHasSizes, selectedSize]);
 
-  // ── Derived price fields ────────────────────
-  const finalPrice     = displayPricing.discountedPrice ?? displayPricing.sellingPrice;
-  const originalPrice  = displayPricing.sellingPrice;
-  const hasDiscount    = displayPricing.discountedPrice != null;
-  const savingsAmount  = hasDiscount ? originalPrice - finalPrice : 0;
+  // Dev debug
+  if (process.env.NODE_ENV === "development") {
+    console.log("[PDP Pricing debug]", {
+      activeSKUid: activeSKU?.id,
+      skuPrice_MRP: activeSKU?.price,
+      skuPricing: activeSKU?.pricing,
+      displayPricing,
+    });
+  }
 
-  // ─────────────────────────────────────────────
-  // RENDER
-  // ─────────────────────────────────────────────
+  const { finalPrice, originalPrice, hasDiscount, discountLabel, savingsAmount } = displayPricing;
+
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 lg:py-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
-        {/* ── LEFT — IMAGES ─────────────────────── */}
+        {/* LEFT — IMAGES */}
         <div className="lg:col-span-5 sticky top-24">
           <ProductImages images={activeImages} />
         </div>
 
-        {/* ── RIGHT — DETAILS ───────────────────── */}
+        {/* RIGHT — DETAILS */}
         <div className="lg:col-span-7 flex flex-col space-y-8">
 
           {/* Header */}
@@ -178,7 +242,6 @@ export default function ProductClient({ product }: any) {
               {product.title}
             </h1>
 
-            {/* Ratings — hide if 0 */}
             {avg !== null && avg > 0 && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
@@ -195,23 +258,30 @@ export default function ProductClient({ product }: any) {
           {/* Price */}
           <div className="space-y-1">
             <div className="flex items-baseline gap-4 flex-wrap">
+              {/* Final price (after discount) */}
               <span className="text-4xl font-black text-genz-ink tracking-tighter">
                 ₹{finalPrice.toLocaleString()}
               </span>
+
               {hasDiscount && (
                 <>
+                  {/* MRP strikethrough */}
                   <span className="text-xl line-through text-genz-muted opacity-50 font-bold">
                     ₹{originalPrice.toLocaleString()}
                   </span>
-                  {displayPricing.discountLabel && (
+
+                  {/* Discount label e.g. "61% off" */}
+                  {discountLabel && (
                     <span className="text-xl font-black text-genz-accent uppercase">
-                      {displayPricing.discountLabel}
+                      {discountLabel}
                     </span>
                   )}
                 </>
               )}
             </div>
-            {hasDiscount && (
+
+            {/* Savings amount */}
+            {hasDiscount && savingsAmount > 0 && (
               <p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
                 You save ₹{savingsAmount.toLocaleString()}
               </p>
@@ -222,14 +292,10 @@ export default function ProductClient({ product }: any) {
           <div>
             <span
               className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                isOutOfStock
-                  ? "bg-red-50 text-red-600"
-                  : "bg-green-50 text-green-600"
+                isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
               }`}
             >
-              {isOutOfStock
-                ? "Out of Stock"
-                : `In Stock · ${displayStock} left`}
+              {isOutOfStock ? "Out of Stock" : `In Stock · ${displayStock} left`}
             </span>
           </div>
 
@@ -248,24 +314,21 @@ export default function ProductClient({ product }: any) {
             />
           </div>
 
-          {/* Add to cart button */}
+          {/* Add to cart */}
           <AddToCartButton
             productId={product.id}
             stock={displayStock}
-            sizeId={activeSKU?.id}
-            selectedColor={selectedColor}
-            disabled={isOutOfStock || (requiresSize && !selectedSize)}
+            variantId={activeSKU?.id}
+            requiresVariantSelection={requiresVariantSelection}
+            disabled={isOutOfStock}
           />
 
-          {/* Product details grid */}
+          {/* Product details */}
           <div className="space-y-6 pt-6 border-t border-genz-border">
             <h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
               Product Specifications
             </h2>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* Description card */}
               <div className="md:col-span-2 p-5 bg-genz-bg rounded-genz border border-genz-border">
                 <h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">
                   Description
@@ -274,8 +337,6 @@ export default function ProductClient({ product }: any) {
                   {product.description || "Minimalist style for the modern wardrobe."}
                 </p>
               </div>
-
-              {/* Attributes card */}
               <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
                 <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
                   Technical Specs
@@ -299,8 +360,6 @@ export default function ProductClient({ product }: any) {
                   </div>
                 </div>
               </div>
-
-              {/* Extras card */}
               <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
                 <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
                   Extras
@@ -320,13 +379,11 @@ export default function ProductClient({ product }: any) {
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── RECOMMENDATIONS ───────────────────── */}
       <div className="mt-24 space-y-24">
         <TrendingNow />
         <NewArrivals />
