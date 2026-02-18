@@ -57,7 +57,7 @@ export default function AddToCartButton({
 
       await api.post("/cart/add", {
         productId,
-        variantId: variantId ?? null, // lipstick → null
+        sizeId: variantId ?? null, // lipstick → null
       });
 
       setToast({ type: "success", message: "Added to your bag!" });
