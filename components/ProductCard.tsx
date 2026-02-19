@@ -285,7 +285,7 @@ export default function ProductCard({ product }: { product?: Product }) {
             onClick={() => router.push(productUrl)}
             className="w-full py-4 rounded-full font-black text-xs uppercase tracking-widest transition-all bg-genz-ink text-white hover:bg-genz-accent"
           >
-            Select Options
+            Buy Now
           </button>
         ) : (
           // Single no-size SKU → add directly to cart
@@ -301,3 +301,4 @@ export default function ProductCard({ product }: { product?: Product }) {
     </div>
   );
 }
+
