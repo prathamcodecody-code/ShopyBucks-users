@@ -5,19 +5,7 @@ import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
 import FiltersSidebar from "@/components/Filters/FiltersSidebar";
 import { api } from "@/lib/api";
-
-type Product = {
-  id: number;
-  title: string;
-  price: number | string;
-  img1?: string;
-  slug?: string;
-  category?: {
-    id?: number;
-    name: string;
-    slug?: string;
-  };
-};
+import { Product } from "@/lib/product";
 
 export default function ProductsListClient() {
   const searchParams = useSearchParams();
@@ -36,7 +24,10 @@ export default function ProductsListClient() {
     try {
       setLoading(true);
 
-      const params: any = {};
+      const params: any = {
+        limit: 100, // FIX 1: Explicitly set a high limit to get more than 20
+      };
+
       searchParams.forEach((value, key) => {
         params[key] = value;
       });
@@ -58,7 +49,8 @@ export default function ProductsListClient() {
       }
 
       setProducts(list);
-    } catch {
+    } catch (error) {
+      console.error("Error fetching products:", error);
       setProducts([]);
       setTotal(0);
     } finally {
@@ -70,9 +62,11 @@ export default function ProductsListClient() {
     loadProducts();
   }, [searchParams, sort]);
 
-  const categoryName =
-    products[0]?.category?.name ||
-    (categoryId ? "Filtered Products" : "All Products");
+  // FIX 2: Correct Naming Logic
+  // Only use the first product's category name if we are actually filtering by category
+  const categoryName = categoryId 
+    ? (products[0]?.category?.name || "Category Products") 
+    : "All Products";
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
@@ -89,7 +83,7 @@ export default function ProductsListClient() {
         </div>
 
         <select
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-black"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         >
@@ -101,14 +95,14 @@ export default function ProductsListClient() {
       </div>
 
       <div className="grid grid-cols-12 gap-8">
-        <div className="col-span-12 md:col-span-3">
+        <aside className="col-span-12 md:col-span-3">
           <FiltersSidebar categoryId={categoryId} />
-        </div>
+        </aside>
 
-        <div className="col-span-12 md:col-span-9">
+        <main className="col-span-12 md:col-span-9">
           {loading && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
+              {[...Array(6)].map((_, i) => (
                 <div
                   key={i}
                   className="h-72 bg-gray-100 animate-pulse rounded-xl"
@@ -135,7 +129,7 @@ export default function ProductsListClient() {
               ))}
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );
