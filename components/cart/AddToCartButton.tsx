@@ -78,7 +78,7 @@ export default function AddToCartButton({
   if (loading) buttonText = "Adding...";
   else if (isOutOfStock) buttonText = "Sold Out";
   else if (requiresVariantSelection && !variantId)
-    buttonText = "Buy Now";
+    buttonText = "Select Options";
 
   return (
     <>
@@ -107,4 +107,5 @@ export default function AddToCartButton({
     </>
   );
 }
+
 
