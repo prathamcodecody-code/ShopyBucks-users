@@ -1,25 +1,31 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
-import FiltersSidebar from "@/components/Filters/FiltersSidebar";
+import FiltersSidebar, { FilterState } from "@/components/Filters/FiltersSidebar";
 
 export default function SearchClient() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
-  const query = searchParams.get("query") || "";
+  const query    = searchParams.get("query") || "";
   const sortParam = searchParams.get("sort") || "relevance";
 
   const [products, setProducts] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
-  const [sort, setSort] = useState(sortParam);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [total, setTotal]       = useState(0);
+  const [sort, setSort]         = useState(sortParam);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
 
-  const loadProducts = useCallback(async () => {
+  // Keep sort in a ref so loadProducts never goes stale
+  const sortRef = useRef(sort);
+  useEffect(() => { sortRef.current = sort; }, [sort]);
+
+  // Keep latest filters in a ref so sort changes can re-use them
+  const filtersRef = useRef<FilterState>({ attributes: {}, colors: [], sizes: [] });
+
+  const loadProducts = useCallback(async (filters: FilterState) => {
     if (!query.trim()) {
       setProducts([]);
       setTotal(0);
@@ -30,10 +36,28 @@ export default function SearchClient() {
       setLoading(true);
       setError("");
 
-      const params: any = { search: query };
-      if (sort !== "relevance") params.sort = sort;
+      const params: Record<string, any> = { search: query };
 
-      const res = await api.get("/products", { params });
+      if (filters.categoryId) params.categoryId = filters.categoryId;
+      if (filters.typeId)     params.typeId     = filters.typeId;
+      if (filters.subtypeId)  params.subtypeId  = filters.subtypeId;
+      if (filters.minPrice)   params.minPrice   = filters.minPrice;
+      if (filters.maxPrice)   params.maxPrice   = filters.maxPrice;
+      if (filters.stock)      params.stock      = filters.stock;
+      if (sortRef.current !== "relevance") params.sort = sortRef.current;
+
+      if (filters.colors && filters.colors.length > 0) {
+        params.colors = filters.colors.join(",");
+      }
+      if (filters.sizes && filters.sizes.length > 0) {
+        params.sizes = filters.sizes.join(",");
+      }
+
+      for (const [slug, values] of Object.entries(filters.attributes || {})) {
+        if (values.length) params[slug] = values.join(",");
+      }
+
+      const res  = await api.get("/products", { params });
       const data = res.data;
 
       const list = Array.isArray(data)
@@ -43,31 +67,25 @@ export default function SearchClient() {
         : [];
 
       setProducts(list);
-      setTotal(
-        typeof data.total === "number" ? data.total : list.length
-      );
+      setTotal(typeof data.total === "number" ? data.total : list.length);
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message || "Failed to load products"
-      );
+      setError(err?.response?.data?.message || "Failed to load products");
       setProducts([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [query, sort]);
+  }, [query]); // only query as dep — sort read via ref
 
+  // Reload when query or sort changes
   useEffect(() => {
-    loadProducts();
+    loadProducts(filtersRef.current);
+  }, [query, sort, loadProducts]);
+
+  const handleFilter = useCallback((filters: FilterState) => {
+    filtersRef.current = filters;
+    loadProducts(filters);
   }, [loadProducts]);
-
-  const handleSortChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("sort", value);
-
-    router.push(`/search?${params.toString()}`);
-    setSort(value);
-  };
 
   if (!query) {
     return (
@@ -82,14 +100,17 @@ export default function SearchClient() {
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">
-          Results for “{query}”
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold">Results for "{query}"</h1>
+          {!loading && (
+            <p className="text-sm text-gray-500 mt-1">{total} Products Found</p>
+          )}
+        </div>
 
         <select
-          className="border rounded px-3 py-2 w-full sm:w-auto"
+          className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-purple-600"
           value={sort}
-          onChange={(e) => handleSortChange(e.target.value)}
+          onChange={(e) => setSort(e.target.value)}
         >
           <option value="relevance">Relevance</option>
           <option value="newest">Newest First</option>
@@ -99,32 +120,41 @@ export default function SearchClient() {
       </div>
 
       <div className="grid grid-cols-12 gap-6">
-        <aside className="hidden md:block md:col-span-3">
-          <FiltersSidebar />
+        <aside className="col-span-12 md:col-span-3">
+          <FiltersSidebar
+            onFilter={handleFilter}
+            initialFilters={{ attributes: {}, colors: [], sizes: [] }}
+          />
         </aside>
 
         <main className="col-span-12 md:col-span-9">
-          {loading && <p className="text-gray-500">Loading products…</p>}
+          {loading && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-72 bg-gray-100 animate-pulse rounded-xl" />
+              ))}
+            </div>
+          )}
+
           {error && <p className="text-red-500">{error}</p>}
 
-          {!loading && !error && (
-            <>
-              <p className="text-gray-600 mb-4">
-                {total} Products Found
+          {!loading && !error && products.length === 0 && (
+            <div className="text-center py-20">
+              <p className="text-lg font-semibold text-gray-700">
+                No products found for "{query}"
               </p>
+              <p className="text-gray-500 mt-2">
+                Try different keywords or adjust filters
+              </p>
+            </div>
+          )}
 
-              {products.length === 0 ? (
-                <p className="text-gray-500">
-                  No products found for “{query}”
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {products.map((p) => (
-                    <ProductCard key={p.id} product={p} />
-                  ))}
-                </div>
-              )}
-            </>
+          {!loading && !error && products.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+              {products.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
           )}
         </main>
       </div>
