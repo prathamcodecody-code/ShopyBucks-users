@@ -54,7 +54,7 @@ export default function TrendingNow() {
 
   /* ---------------- MAIN UI ---------------- */
   return (
-    <section className="bg-genz-bg py-16 px-4 sm:px-6">
+    <section className="bg-genz-bg pt-1 pb-1 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}
@@ -128,3 +128,4 @@ function Badge({ item }: { item: { icon: any, title: string, desc: string } }) {
     </div>
   );
 }
+
