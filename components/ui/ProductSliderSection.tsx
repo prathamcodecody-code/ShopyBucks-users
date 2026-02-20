@@ -74,14 +74,14 @@ export default function ProductSliderSection({
           {section.products.map((product) => (
             <div 
               key={product.id} 
-              className="w-[220px] md:w-[280px] flex-shrink-0 snap-start transition-transform duration-500 hover:-translate-y-1"
+              className="w-[200px] md:w-[300px] flex-shrink-0 snap-start transition-transform duration-500 hover:-translate-y-1"
             >
               <ProductCard product={product} />
             </div>
           ))}
           
           {/* SNEAK PEEK CARD */}
-          <div className="w-[180px] md:w-[240px] flex-shrink-0 snap-start flex items-center justify-center">
+          <div className="w-[200px] md:w-[300px] flex-shrink-0 snap-start flex items-center justify-center">
              <button className="flex flex-col items-center gap-4 group">
                 <div className="w-16 h-16 rounded-full border-2 border-dashed border-genz-border flex items-center justify-center group-hover:border-genz-accent group-hover:bg-genz-softAccent transition-all duration-300">
                    <ChevronRight size={24} className="text-genz-muted group-hover:text-genz-accent" />
