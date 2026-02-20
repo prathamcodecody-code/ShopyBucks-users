@@ -8,24 +8,12 @@ import TrendingNow from "@/components/TrendingSection";
 import NewArrivals from "@/components/NewArrivals";
 import { api } from "@/lib/api";
 import { Star } from "lucide-react";
+import DeliveryCheck from "@/components/ui/DeliveryCheck";
 
 const IMG_BASE = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/products/`
   : "http://localhost:3030/uploads/products/";
 
-// ─────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────
-
-/**
- * What your backend's computePricing returns inside each SKU:
- *   sellingPrice  = final price the customer pays (AFTER discount)
- *   discountedPrice = same as sellingPrice when there IS a discount, null otherwise
- *   discountLabel  = e.g. "61% off"
- *
- * The MRP (before discount) lives on the SKU itself as `sku.price`
- * (the raw price the seller set before any discount is applied).
- */
 interface Pricing {
   sellingPrice: number;        // final/discounted price
   discountedPrice: number | null;
@@ -323,6 +311,11 @@ export default function ProductClient({ product }: any) {
             disabled={isOutOfStock}
           />
 
+          <DeliveryCheck
+          productId={product.id}
+          orderAmount={product.finalPrice}
+            />
+          
           {/* Product details */}
           <div className="space-y-6 pt-6 border-t border-genz-border">
             <h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
@@ -391,3 +384,4 @@ export default function ProductClient({ product }: any) {
     </div>
   );
 }
+
