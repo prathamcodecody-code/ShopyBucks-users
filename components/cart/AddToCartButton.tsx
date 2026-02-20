@@ -60,7 +60,7 @@ export default function AddToCartButton({
         sizeId: variantId ?? null, // lipstick → null
       });
 
-      setToast({ type: "success", message: "Added to your bag!" });
+      setToast({ type: "success", message: "Added to cart!" });
     } catch (err: any) {
       setToast({
         type: "error",
@@ -74,11 +74,11 @@ export default function AddToCartButton({
   const isOutOfStock = stock < 1;
   const isDisabled = disabled || loading || isOutOfStock;
 
-  let buttonText = "Add to Bag";
-  if (loading) buttonText = "Adding...";
-  else if (isOutOfStock) buttonText = "Sold Out";
-  else if (requiresVariantSelection && !variantId)
-    buttonText = "Select Options";
+  let buttonText = "Buy Now";
+if (loading) buttonText = "Adding...";
+else if (isOutOfStock) buttonText = "Sold Out";
+else if (requiresVariantSelection && !variantId)
+  buttonText = "Select Options";
 
   return (
     <>
@@ -107,5 +107,3 @@ export default function AddToCartButton({
     </>
   );
 }
-
-
