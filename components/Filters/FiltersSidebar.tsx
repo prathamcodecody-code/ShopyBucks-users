@@ -18,7 +18,6 @@ interface AttributeFilter {
 interface FiltersResponse {
   price: { min: number | null; max: number | null };
   filters: AttributeFilter[];
-  // ✅ Your backend getFiltersWithCounts already returns these
   colors?: Array<{ color: string; count: number }>;
   sizes?: Array<{ size: string; count: number }>;
 }
@@ -162,7 +161,6 @@ function FilterPanel({ filters, data, loading, types, attrSearch, onTypeChange, 
   onPriceChange: (min: number | undefined, max: number | undefined) => void;
   onStockChange: (stock: "in" | undefined) => void;
 }) {
-  // ✅ Colors & sizes come from the /products/filters API response — no separate fetch needed
   const availableColors = data?.colors ?? [];
   const availableSizes  = data?.sizes  ?? [];
 
@@ -177,7 +175,12 @@ function FilterPanel({ filters, data, loading, types, attrSearch, onTypeChange, 
               <div key={type.id}>
                 <label className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer ${filters.typeId === type.id ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-700"}`}>
                   <span className="text-sm font-medium">{type.name}</span>
-                  <input type="radio" checked={filters.typeId === type.id} onChange={() => onTypeChange(type.id)} className="hidden" />
+                  <input 
+                    type="radio" 
+                    checked={filters.typeId === type.id} 
+                    onChange={() => onTypeChange(filters.typeId === type.id ? undefined : type.id)} 
+                    className="hidden" 
+                  />
                   {filters.typeId === type.id && <Check size={14} strokeWidth={3} />}
                 </label>
                 {type.subtypes?.length > 0 && filters.typeId === type.id && (
@@ -185,7 +188,12 @@ function FilterPanel({ filters, data, loading, types, attrSearch, onTypeChange, 
                     {type.subtypes.map((sub: any) => (
                       <label key={sub.id} className={`flex items-center justify-between px-3 py-1.5 rounded-lg transition-all cursor-pointer ${filters.subtypeId === sub.id ? "bg-purple-50 text-purple-600" : "hover:bg-gray-50 text-gray-600"}`}>
                         <span className="text-xs font-medium">{sub.name}</span>
-                        <input type="radio" checked={filters.subtypeId === sub.id} onChange={() => onSubtypeChange(sub.id)} className="hidden" />
+                        <input 
+                          type="radio" 
+                          checked={filters.subtypeId === sub.id} 
+                          onChange={() => onSubtypeChange(filters.subtypeId === sub.id ? undefined : sub.id)} 
+                          className="hidden" 
+                        />
                         {filters.subtypeId === sub.id && <Check size={12} strokeWidth={3} />}
                       </label>
                     ))}
@@ -334,37 +342,26 @@ export default function FiltersSidebar({ categoryId, onFilter, initialFilters }:
     categoryId: categoryId ? Number(categoryId) : undefined,
   });
 
-  // Always up-to-date ref for the onFilter callback — avoids stale closures
-  const onFilterRef = useRef(onFilter);
-  useEffect(() => { onFilterRef.current = onFilter; }, [onFilter]);
+  const filtersRef = useRef(filters);
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
 
-  // ─── Core: update state + notify parent (no setTimeout race conditions)
-  const updateFilters = useCallback((updater: (prev: FilterState) => FilterState) => {
-    setFilters((prev) => {
-      const next = updater(prev);
-      Promise.resolve().then(() => onFilterRef.current(next));
-      return next;
-    });
-  }, []);
-
-  // ─── Fetch /products/filters — includes colors, sizes, attributes, price range
-  // Called on mount and whenever any filter changes
-  const fetchFilters = useCallback(async (currentFilters: FilterState) => {
+  // ─── Fetch /products/filters
+  const fetchFilters = useCallback(async () => {
     if (!categoryId) { setData(null); setLoading(false); return; }
 
     setLoading(true);
     try {
       const params: Record<string, any> = { categoryId };
 
-      // Pass ALL active filters so backend returns accurate facet counts
-      if (currentFilters.colors?.length)    params.colors    = currentFilters.colors.join(",");
-      if (currentFilters.sizes?.length)     params.sizes     = currentFilters.sizes.join(",");
-      if (currentFilters.typeId)            params.typeId    = currentFilters.typeId;
-      if (currentFilters.subtypeId)         params.subtypeId = currentFilters.subtypeId;
-      if (currentFilters.minPrice)          params.minPrice  = currentFilters.minPrice;
-      if (currentFilters.maxPrice)          params.maxPrice  = currentFilters.maxPrice;
+      // ✅ Pass typeId and subtypeId to get filtered results
+      if (filtersRef.current.typeId)      params.typeId    = filtersRef.current.typeId;
+      if (filtersRef.current.subtypeId)   params.subtypeId = filtersRef.current.subtypeId;
+      if (filtersRef.current.colors?.length)    params.colors    = filtersRef.current.colors.join(",");
+      if (filtersRef.current.sizes?.length)     params.sizes     = filtersRef.current.sizes.join(",");
+      if (filtersRef.current.minPrice)          params.minPrice  = filtersRef.current.minPrice;
+      if (filtersRef.current.maxPrice)          params.maxPrice  = filtersRef.current.maxPrice;
 
-      for (const [slug, values] of Object.entries(currentFilters.attributes || {})) {
+      for (const [slug, values] of Object.entries(filtersRef.current.attributes || {})) {
         if (values.length) params[slug] = values.join(",");
       }
 
@@ -386,32 +383,31 @@ export default function FiltersSidebar({ categoryId, onFilter, initialFilters }:
       .catch(() => setTypes([]));
   }, [categoryId]);
 
-  // Initial filter fetch
+  // Initial filter fetch & re-fetch when filters change
   useEffect(() => {
-    fetchFilters(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId]);
+    fetchFilters();
+  }, [fetchFilters, filters.typeId, filters.subtypeId, filters.colors, filters.sizes, filters.attributes, filters.minPrice, filters.maxPrice]);
 
-  // ─── Handlers: each updates state AND re-fetches filters for fresh counts
+  // ─── Handlers
 
   const handleTypeChange = useCallback((typeId: number | undefined) => {
-    updateFilters((prev) => {
+    setFilters((prev) => {
       const next = { ...prev, typeId, subtypeId: undefined };
-      fetchFilters(next);
+      setTimeout(() => onFilter(next), 0);
       return next;
     });
-  }, [updateFilters, fetchFilters]);
+  }, [onFilter]);
 
   const handleSubtypeChange = useCallback((subtypeId: number | undefined) => {
-    updateFilters((prev) => {
+    setFilters((prev) => {
       const next = { ...prev, subtypeId };
-      fetchFilters(next);
+      setTimeout(() => onFilter(next), 0);
       return next;
     });
-  }, [updateFilters, fetchFilters]);
+  }, [onFilter]);
 
   const toggleColor = useCallback((color: string) => {
-    updateFilters((prev) => {
+    setFilters((prev) => {
       const current = prev.colors ?? [];
       const next = {
         ...prev,
@@ -419,13 +415,13 @@ export default function FiltersSidebar({ categoryId, onFilter, initialFilters }:
           ? current.filter((c) => c !== color)
           : [...current, color],
       };
-      fetchFilters(next);
+      setTimeout(() => onFilter(next), 0);
       return next;
     });
-  }, [updateFilters, fetchFilters]);
+  }, [onFilter]);
 
   const toggleSize = useCallback((size: string) => {
-    updateFilters((prev) => {
+    setFilters((prev) => {
       const current = prev.sizes ?? [];
       const next = {
         ...prev,
@@ -433,13 +429,13 @@ export default function FiltersSidebar({ categoryId, onFilter, initialFilters }:
           ? current.filter((s) => s !== size)
           : [...current, size],
       };
-      fetchFilters(next);
+      setTimeout(() => onFilter(next), 0);
       return next;
     });
-  }, [updateFilters, fetchFilters]);
+  }, [onFilter]);
 
   const toggleAttr = useCallback((slug: string, value: string) => {
-    updateFilters((prev) => {
+    setFilters((prev) => {
       const current = prev.attributes[slug] ?? [];
       const next = {
         ...prev,
@@ -450,26 +446,30 @@ export default function FiltersSidebar({ categoryId, onFilter, initialFilters }:
             : [...current, value],
         },
       };
-      fetchFilters(next);
+      setTimeout(() => onFilter(next), 0);
       return next;
     });
-  }, [updateFilters, fetchFilters]);
+  }, [onFilter]);
 
   const handleAttrSearchChange = useCallback((slug: string, term: string) => {
     setAttrSearch((p) => ({ ...p, [slug]: term }));
   }, []);
 
   const handlePriceChange = useCallback((min: number | undefined, max: number | undefined) => {
-    updateFilters((prev) => {
+    setFilters((prev) => {
       const next = { ...prev, minPrice: min, maxPrice: max };
-      fetchFilters(next);
+      setTimeout(() => onFilter(next), 0);
       return next;
     });
-  }, [updateFilters, fetchFilters]);
+  }, [onFilter]);
 
   const handleStockChange = useCallback((stock: "in" | undefined) => {
-    updateFilters((prev) => ({ ...prev, stock }));
-  }, [updateFilters]);
+    setFilters((prev) => {
+      const next = { ...prev, stock };
+      setTimeout(() => onFilter(next), 0);
+      return next;
+    });
+  }, [onFilter]);
 
   const reset = useCallback(() => {
     const cleared: FilterState = {
@@ -480,9 +480,8 @@ export default function FiltersSidebar({ categoryId, onFilter, initialFilters }:
     };
     setFilters(cleared);
     setAttrSearch({});
-    fetchFilters(cleared);
-    onFilterRef.current(cleared);
-  }, [categoryId, fetchFilters]);
+    onFilter(cleared);
+  }, [categoryId, onFilter]);
 
   const filtersActive = activeCount(filters);
 
