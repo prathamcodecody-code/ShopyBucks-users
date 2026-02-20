@@ -17,19 +17,28 @@ export default function MegaMenu({ categoryId }: { categoryId: number }) {
       try {
         setLoading(true);
         // 1. Fetch Types (e.g., Mobiles, Laptops, Speakers)
-        const typeRes = await api.get(`/product-types?categoryId=${categoryId}`);
+        const typeRes = await api.get(`/product-types`, {
+          params: { categoryId }
+        });
         const baseTypes = Array.isArray(typeRes.data) ? typeRes.data : [];
 
-        // 2. Fetch Subtypes for each Type to create the list effect
+        // 2. Fetch Subtypes for each Type
         const enrichedTypes = await Promise.all(
           baseTypes.map(async (t: any) => {
             try {
-              const subRes = await api.get(`/product-subtypes?typeId=${t.id}`);
+              // ✅ FIX: Pass both typeId AND categoryId to get accurate subtypes
+              const subRes = await api.get(`/product-subtypes`, {
+                params: { 
+                  typeId: t.id,
+                  categoryId // This ensures we only get subtypes for this category
+                }
+              });
               return {
                 ...t,
                 subtypes: Array.isArray(subRes.data) ? subRes.data : [],
               };
-            } catch {
+            } catch (err) {
+              console.error(`Failed to fetch subtypes for type ${t.id}:`, err);
               return { ...t, subtypes: [] };
             }
           })
@@ -74,7 +83,8 @@ export default function MegaMenu({ categoryId }: { categoryId: number }) {
                   t.subtypes.map((s: any) => (
                     <Link
                       key={s.id}
-                      href={`/all-products?categoryId=${categoryId}&subtypeId=${s.id}`}
+                      
+                      href={`/all-products?categoryId=${categoryId}&typeId=${t.id}&subtypeId=${s.id}`}
                       className="text-[13px] text-gray-500 hover:text-amazon-orange transition-colors font-medium"
                     >
                       {s.name}
@@ -98,7 +108,7 @@ export default function MegaMenu({ categoryId }: { categoryId: number }) {
           {types.length === 0 && (
             <div className="col-span-full py-10 text-center border-2 border-dashed border-gray-100 rounded-2xl">
               <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">
-                Explore our latest {categoryId} collection below
+                Explore our latest collection below
               </p>
             </div>
           )}
