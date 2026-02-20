@@ -26,10 +26,16 @@ interface AttributeFilter {
 interface FiltersResponse {
   price: { min: number | null; max: number | null };
   filters: AttributeFilter[];
+  colors?: Array<{ color: string; count: number }>;
+  sizes?: Array<{ size: string; count: number }>;
 }
 
 export interface FullHomeFilterState extends HomeFilterState {
   categoryId?: number;
+  typeId?: number;
+  subtypeId?: number;
+  colors?: string[];
+  sizes?: string[];
   attributes: Record<string, string[]>;
 }
 
@@ -43,6 +49,7 @@ const CSS_COLORS: Record<string, string> = {
   black: "#0F172A", white: "#FFFFFF", red: "#EF4444", blue: "#3B82F6",
   green: "#22C55E", yellow: "#EAB308", orange: "#EA580C", pink: "#EC4899",
   purple: "#A855F7", brown: "#92400E", grey: "#64748B", gray: "#64748B",
+  beige: "#D4C5B9", navy: "#1E3A8A", maroon: "#7C2D12",
 };
 
 function colorSwatch(value: string): string | null {
@@ -54,8 +61,10 @@ function activeCount(f: FullHomeFilterState): number {
   if (f.minPrice || f.maxPrice) n++;
   if (f.stock) n++;
   if (f.sort && f.sort !== "newest") n++;
-  if (f.season) n++;
-  if (f.occasion) n++;
+  if (f.typeId) n++;
+  if (f.subtypeId) n++;
+  if (f.colors?.length) n++;
+  if (f.sizes?.length) n++;
   for (const vals of Object.values(f.attributes || {})) {
     if (vals.length) n++;
   }
@@ -63,8 +72,7 @@ function activeCount(f: FullHomeFilterState): number {
 }
 
 // ─────────────────────────────────────────────
-// Section — defined OUTSIDE the main component
-// so React never remounts it on parent re-renders
+// Section
 // ─────────────────────────────────────────────
 
 function Section({
@@ -108,8 +116,7 @@ function Section({
 }
 
 // ─────────────────────────────────────────────
-// AttributeSection — also outside main render
-// Receives everything as props, no stale closures
+// AttributeSection
 // ─────────────────────────────────────────────
 
 function AttributeSection({
@@ -151,7 +158,7 @@ function AttributeSection({
         </div>
       )}
 
-      <div className="space-y-1">
+      <div className="space-y-1 max-h-64 overflow-y-auto">
         {visibleValues.length === 0 ? (
           <p className="text-xs text-genz-muted px-2">No results</p>
         ) : (
@@ -171,10 +178,10 @@ function AttributeSection({
                   onChange={() => onToggle(attr.slug, value)}
                   className="w-4 h-4 rounded border-genz-border text-genz-accent focus:ring-0"
                 />
-                {isColor && (
+                {isColor && swatch && (
                   <span
                     className="w-4 h-4 rounded-full border border-genz-border shadow-sm"
-                    style={{ backgroundColor: swatch || "#EEE" }}
+                    style={{ backgroundColor: swatch }}
                   />
                 )}
                 <span className={`text-xs font-bold flex-1 ${active ? "text-genz-accent" : "text-genz-muted"}`}>
@@ -205,9 +212,7 @@ function AttributeSection({
 }
 
 // ─────────────────────────────────────────────
-// FilterPanel — the actual panel content, also
-// a proper named component defined outside the
-// main component to prevent remount on re-renders
+// FilterPanel
 // ─────────────────────────────────────────────
 
 interface FilterPanelProps {
@@ -215,9 +220,14 @@ interface FilterPanelProps {
   data: FiltersResponse | null;
   loading: boolean;
   categories: { id: number; name: string; slug: string }[];
+  types: any[];
   attrSearch: Record<string, string>;
   onCategoryChange: (id: number) => void;
+  onTypeChange: (id: number | undefined) => void;
+  onSubtypeChange: (id: number | undefined) => void;
   onToggleAttr: (slug: string, value: string) => void;
+  onToggleColor: (color: string) => void;
+  onToggleSize: (size: string) => void;
   onAttrSearchChange: (slug: string, term: string) => void;
   onPriceChange: (min: number | undefined, max: number | undefined) => void;
 }
@@ -227,12 +237,20 @@ function FilterPanel({
   data,
   loading,
   categories,
+  types,
   attrSearch,
   onCategoryChange,
+  onTypeChange,
+  onSubtypeChange,
   onToggleAttr,
+  onToggleColor,
+  onToggleSize,
   onAttrSearchChange,
   onPriceChange,
 }: FilterPanelProps) {
+  const availableColors = data?.colors ?? [];
+  const availableSizes = data?.sizes ?? [];
+
   return (
     <div className="space-y-2">
 
@@ -260,6 +278,108 @@ function FilterPanel({
           ))}
         </div>
       </Section>
+
+      {/* ── PRODUCT TYPES ── */}
+      {types.length > 0 && (
+        <Section title="Product Type" count={filters.typeId || filters.subtypeId ? 1 : 0}>
+          <div className="space-y-2">
+            {types.map((type) => (
+              <div key={type.id}>
+                <label className={`flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
+                  filters.typeId === type.id ? "bg-orange-50 text-genz-accent" : "hover:bg-genz-bg text-genz-muted"
+                }`}>
+                  <span className="text-sm font-bold">{type.name}</span>
+                  <input
+                    type="radio"
+                    checked={filters.typeId === type.id}
+                    onChange={() => onTypeChange(filters.typeId === type.id ? undefined : type.id)}
+                    className="hidden"
+                  />
+                  {filters.typeId === type.id && <Check size={14} strokeWidth={3} />}
+                </label>
+                {type.subtypes?.length > 0 && filters.typeId === type.id && (
+                  <div className="ml-6 mt-2 space-y-1">
+                    {type.subtypes.map((sub: any) => (
+                      <label key={sub.id} className={`flex items-center justify-between px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                        filters.subtypeId === sub.id ? "bg-orange-50 text-genz-accent" : "hover:bg-genz-bg text-genz-muted"
+                      }`}>
+                        <span className="text-xs font-bold">{sub.name}</span>
+                        <input
+                          type="radio"
+                          checked={filters.subtypeId === sub.id}
+                          onChange={() => onSubtypeChange(filters.subtypeId === sub.id ? undefined : sub.id)}
+                          className="hidden"
+                        />
+                        {filters.subtypeId === sub.id && <Check size={12} strokeWidth={3} />}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* ── SKU COLORS ── */}
+      {availableColors.length > 0 && (
+        <Section title="Color" count={filters.colors?.length || 0}>
+          <div className="space-y-1 max-h-64 overflow-y-auto">
+            {availableColors.map(({ color, count }) => {
+              const swatch = colorSwatch(color);
+              const active = (filters.colors ?? []).includes(color);
+              return (
+                <label key={color} className={`flex items-center gap-3 cursor-pointer px-2 py-1.5 rounded-xl transition-all ${
+                  active ? "bg-orange-50" : "hover:bg-genz-bg"
+                }`}>
+                  <input type="checkbox" checked={active} onChange={() => onToggleColor(color)}
+                    className="w-4 h-4 rounded border-genz-border text-genz-accent focus:ring-0" />
+                  {swatch && <span className="w-4 h-4 rounded-full border border-genz-border shadow-sm" style={{ backgroundColor: swatch }} />}
+                  <span className={`text-xs font-bold flex-1 ${active ? "text-genz-accent" : "text-genz-muted"}`}>{color}</span>
+                  <span className="text-[10px] text-genz-muted opacity-40 font-black">{count}</span>
+                </label>
+              );
+            })}
+          </div>
+          {(filters.colors ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-genz-border">
+              {(filters.colors ?? []).map((c) => (
+                <span key={c} className="inline-flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full font-bold">
+                  {c}<button onClick={() => onToggleColor(c)}><X size={9} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+        </Section>
+      )}
+
+      {/* ── SKU SIZES ── */}
+      {availableSizes.length > 0 && (
+        <Section title="Size" count={filters.sizes?.length || 0}>
+          <div className="flex flex-wrap gap-2">
+            {availableSizes.map(({ size, count }) => {
+              const active = (filters.sizes ?? []).includes(size);
+              return (
+                <button key={size} onClick={() => onToggleSize(size)}
+                  className={`px-4 py-2 rounded-xl border-2 font-bold text-xs transition-all ${
+                    active ? "border-genz-accent bg-orange-50 text-genz-accent" : "border-genz-border hover:border-gray-300 text-genz-muted"
+                  }`}>
+                  {size}<span className="ml-1 text-[9px] opacity-50">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+          {(filters.sizes ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-genz-border">
+              {(filters.sizes ?? []).map((s) => (
+                <span key={s} className="inline-flex items-center gap-1 text-[10px] bg-orange-100 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full font-bold">
+                  {s}<button onClick={() => onToggleSize(s)}><X size={9} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+        </Section>
+      )}
 
       {/* ── PRICE ── */}
       <Section title="Price Range" defaultOpen count={filters.minPrice || filters.maxPrice ? 1 : 0}>
@@ -335,34 +455,41 @@ function FilterPanel({
 // ─────────────────────────────────────────────
 
 export default function HomeFilter({ onFilter, initialFilters, categories }: HomeFilterProps) {
-  const [data, setData]           = useState<FiltersResponse | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const [data, setData] = useState<FiltersResponse | null>(null);
+  const [loading, setLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [attrSearch, setAttrSearch] = useState<Record<string, string>>({});
-  const [filters, setFilters]     = useState<FullHomeFilterState>({
+  const [types, setTypes] = useState<any[]>([]);
+  const [filters, setFilters] = useState<FullHomeFilterState>({
     sort: "newest",
     attributes: {},
+    colors: [],
+    sizes: [],
     ...initialFilters,
   });
 
-  // ✅ Always-current ref — callbacks that call onFilter
-  // read from this ref instead of the stale closure value
   const filtersRef = useRef(filters);
   useEffect(() => { filtersRef.current = filters; }, [filters]);
 
-  const attrsKey = JSON.stringify(filters.attributes);
-
+  // ✅ Fetch filters with ALL current filter state for accurate counts
   const fetchFilters = useCallback(async () => {
-    if (!filters.categoryId) { setData(null); setLoading(false); return; }
+    if (!filtersRef.current.categoryId) { setData(null); setLoading(false); return; }
     setLoading(true);
     try {
-      const params: Record<string, any> = { categoryId: filters.categoryId };
-      const attrs = JSON.parse(attrsKey);
-      for (const [slug, values] of Object.entries(attrs)) {
-        if ((values as string[]).length) params[slug] = (values as string[]).join(",");
+      const params: Record<string, any> = { categoryId: filtersRef.current.categoryId };
+
+      // Pass ALL active filters to get accurate counts
+      if (filtersRef.current.typeId) params.typeId = filtersRef.current.typeId;
+      if (filtersRef.current.subtypeId) params.subtypeId = filtersRef.current.subtypeId;
+      if (filtersRef.current.colors?.length) params.colors = filtersRef.current.colors.join(",");
+      if (filtersRef.current.sizes?.length) params.sizes = filtersRef.current.sizes.join(",");
+      if (filtersRef.current.minPrice) params.minPrice = filtersRef.current.minPrice;
+      if (filtersRef.current.maxPrice) params.maxPrice = filtersRef.current.maxPrice;
+
+      for (const [slug, values] of Object.entries(filtersRef.current.attributes || {})) {
+        if (values.length) params[slug] = values.join(",");
       }
-      if (filters.season)   params.season   = filters.season;
-      if (filters.occasion) params.occasion = filters.occasion;
+
       const res = await api.get("/products/filters", { params });
       setData(res.data);
     } catch (err) {
@@ -371,30 +498,108 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
     } finally {
       setLoading(false);
     }
-  }, [filters.categoryId, attrsKey, filters.season, filters.occasion]);
+  }, []);
 
-  useEffect(() => { fetchFilters(); }, [fetchFilters]);
+  // Fetch product types when category changes
+  useEffect(() => {
+    if (!filters.categoryId) return;
+    api.get("/product-types", { params: { categoryId: filters.categoryId } })
+      .then((res) => {
+        const baseTypes = Array.isArray(res.data) ? res.data : [];
+        // Fetch subtypes for each type
+        Promise.all(
+          baseTypes.map(async (t: any) => {
+            try {
+              const subRes = await api.get("/product-subtypes", {
+                params: { typeId: t.id, categoryId: filters.categoryId }
+              });
+              return { ...t, subtypes: Array.isArray(subRes.data) ? subRes.data : [] };
+            } catch {
+              return { ...t, subtypes: [] };
+            }
+          })
+        ).then(setTypes);
+      })
+      .catch(() => setTypes([]));
+  }, [filters.categoryId]);
 
-  // Category — immediately fires onFilter
+  // Re-fetch filters when any filter changes
+  useEffect(() => {
+    fetchFilters();
+  }, [
+    filters.categoryId,
+    filters.typeId,
+    filters.subtypeId,
+    filters.colors,
+    filters.sizes,
+    filters.attributes,
+    filters.minPrice,
+    filters.maxPrice,
+    fetchFilters
+  ]);
+
+  // ─── Handlers
+
   const handleCategoryChange = useCallback((categoryId: number) => {
     const next: FullHomeFilterState = {
-      ...filtersRef.current,
+      sort: "newest",
       categoryId,
       attributes: {},
+      colors: [],
+      sizes: [],
     };
     setFilters(next);
     setAttrSearch({});
-    onFilter(next);
+    setTimeout(() => onFilter(next), 0);
   }, [onFilter]);
 
-  // ✅ THE CORE FIX: toggleAttr builds the complete next
-  // state inside the functional updater (so it's never
-  // stale), then immediately calls onFilter with it.
-  // This means every checkbox tick fires a product fetch —
-  // no need to press Apply for attributes to work.
+  const handleTypeChange = useCallback((typeId: number | undefined) => {
+    setFilters((prev) => {
+      const next = { ...prev, typeId, subtypeId: undefined };
+      setTimeout(() => onFilter(next), 0);
+      return next;
+    });
+  }, [onFilter]);
+
+  const handleSubtypeChange = useCallback((subtypeId: number | undefined) => {
+    setFilters((prev) => {
+      const next = { ...prev, subtypeId };
+      setTimeout(() => onFilter(next), 0);
+      return next;
+    });
+  }, [onFilter]);
+
+  const toggleColor = useCallback((color: string) => {
+    setFilters((prev) => {
+      const current = prev.colors ?? [];
+      const next = {
+        ...prev,
+        colors: current.includes(color)
+          ? current.filter((c) => c !== color)
+          : [...current, color],
+      };
+      setTimeout(() => onFilter(next), 0);
+      return next;
+    });
+  }, [onFilter]);
+
+  const toggleSize = useCallback((size: string) => {
+    setFilters((prev) => {
+      const current = prev.sizes ?? [];
+      const next = {
+        ...prev,
+        sizes: current.includes(size)
+          ? current.filter((s) => s !== size)
+          : [...current, size],
+      };
+      setTimeout(() => onFilter(next), 0);
+      return next;
+    });
+  }, [onFilter]);
+
   const toggleAttr = useCallback((slug: string, value: string) => {
     setFilters((prev) => {
-      const current  = prev.attributes[slug] || [];
+      const current = prev.attributes[slug] || [];
       const nextVals = current.includes(value)
         ? current.filter((v) => v !== value)
         : [...current, value];
@@ -402,8 +607,6 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
         ...prev,
         attributes: { ...prev.attributes, [slug]: nextVals },
       };
-      // setTimeout(0) defers until after React commits the state update,
-      // so onFilter always receives the correct next state object.
       setTimeout(() => onFilter(next), 0);
       return next;
     });
@@ -414,14 +617,20 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
   }, []);
 
   const handlePriceChange = useCallback((min: number | undefined, max: number | undefined) => {
-    setFilters((p) => ({ ...p, minPrice: min, maxPrice: max }));
-  }, []);
+    setFilters((prev) => {
+      const next = { ...prev, minPrice: min, maxPrice: max };
+      setTimeout(() => onFilter(next), 0);
+      return next;
+    });
+  }, [onFilter]);
 
   const reset = useCallback(() => {
     const cleared: FullHomeFilterState = {
       sort: "newest",
       categoryId: initialFilters?.categoryId,
       attributes: {},
+      colors: [],
+      sizes: [],
     };
     setFilters(cleared);
     setAttrSearch({});
@@ -435,9 +644,6 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
 
   const filtersActive = activeCount(filters);
 
-  // ─────────────────────────────────────────────
-  // RENDER
-  // ─────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -472,9 +678,14 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
                 data={data}
                 loading={loading}
                 categories={categories}
+                types={types}
                 attrSearch={attrSearch}
                 onCategoryChange={handleCategoryChange}
+                onTypeChange={handleTypeChange}
+                onSubtypeChange={handleSubtypeChange}
                 onToggleAttr={toggleAttr}
+                onToggleColor={toggleColor}
+                onToggleSize={toggleSize}
                 onAttrSearchChange={handleAttrSearchChange}
                 onPriceChange={handlePriceChange}
               />
@@ -510,9 +721,14 @@ export default function HomeFilter({ onFilter, initialFilters, categories }: Hom
           data={data}
           loading={loading}
           categories={categories}
+          types={types}
           attrSearch={attrSearch}
           onCategoryChange={handleCategoryChange}
+          onTypeChange={handleTypeChange}
+          onSubtypeChange={handleSubtypeChange}
           onToggleAttr={toggleAttr}
+          onToggleColor={toggleColor}
+          onToggleSize={toggleSize}
           onAttrSearchChange={handleAttrSearchChange}
           onPriceChange={handlePriceChange}
         />
