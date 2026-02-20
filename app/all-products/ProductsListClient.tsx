@@ -15,7 +15,10 @@ export default function ProductsListClient() {
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState(searchParams.get("sort") || "relevance");
 
+  // ✅ FIX: Read all filter params from URL
   const categoryId = searchParams.get("categoryId") || "";
+  const typeId = searchParams.get("typeId") || "";
+  const subtypeId = searchParams.get("subtypeId") || "";
 
   // Keep latest sort in a ref so loadProducts doesn't need it as a dep
   const sortRef = useRef(sort);
@@ -70,11 +73,13 @@ export default function ProductsListClient() {
     } finally {
       setLoading(false);
     }
-  }, []); // ← no deps; uses refs for sort to avoid infinite re-renders
+  }, []);
 
-  // Re-fetch when sort changes — use the current filters stored in a ref
+  // ✅ FIX: Include typeId and subtypeId from URL in initial filters
   const filtersRef = useRef<FilterState>({
     categoryId: categoryId ? Number(categoryId) : undefined,
+    typeId: typeId ? Number(typeId) : undefined,
+    subtypeId: subtypeId ? Number(subtypeId) : undefined,
     attributes: {},
     colors: [],
     sizes: [],
@@ -85,17 +90,19 @@ export default function ProductsListClient() {
     loadProducts(filtersRef.current);
   }, [sort, loadProducts]);
 
-  // Initial load when categoryId changes
+  // ✅ FIX: Re-fetch when URL params change (categoryId, typeId, subtypeId)
   useEffect(() => {
     const initialFilters: FilterState = {
       categoryId: categoryId ? Number(categoryId) : undefined,
+      typeId: typeId ? Number(typeId) : undefined,
+      subtypeId: subtypeId ? Number(subtypeId) : undefined,
       attributes: {},
       colors: [],
       sizes: [],
     };
     filtersRef.current = initialFilters;
     loadProducts(initialFilters);
-  }, [categoryId, loadProducts]);
+  }, [categoryId, typeId, subtypeId, loadProducts]);
 
   // Handle filter changes from sidebar
   const handleFilter = useCallback((filters: FilterState) => {
@@ -136,6 +143,8 @@ export default function ProductsListClient() {
             onFilter={handleFilter}
             initialFilters={{
               categoryId: categoryId ? Number(categoryId) : undefined,
+              typeId: typeId ? Number(typeId) : undefined,
+              subtypeId: subtypeId ? Number(subtypeId) : undefined,
               attributes: {},
               colors: [],
               sizes: [],
