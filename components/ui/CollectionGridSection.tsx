@@ -21,7 +21,7 @@ export default function CollectionGridSection({
   if (!collections.length) return null;
 
   return (
-    <section className="bg-genz-bg py-16 px-4 sm:px-6">
+    <section className="bg-genz-bg pt-1 pb-1 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER: Precise and High-Contrast */}
@@ -91,3 +91,4 @@ export default function CollectionGridSection({
     </section>
   );
 }
+
