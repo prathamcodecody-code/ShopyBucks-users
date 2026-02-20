@@ -147,29 +147,8 @@ export default function HomePage() {
       {/* 4. TOP CATEGORIES */}
       <TopCategories />
 
-      {/* BANNER 3 */}
-      {banner3 && <BannerSection banners={[banner3]} />}
-
-      {/* 5. COLLECTION GRID */}
-      {collections.length > 0 && (
-        <CollectionGridSection collections={collections} />
-      )}
-
-      {/* 6. NEW ARRIVALS */}
-      <NewArrivals />
-
-      {/* 7. DYNAMIC PRODUCT LISTS */}
-      {productSections.map((section) => (
-        <ProductSliderSection key={section.id} section={section} />
-      ))}
-
-      {/* REMAINING BANNERS */}
-      {remainingBanners.length > 0 && (
-        <BannerSection banners={remainingBanners} />
-      )}
-
-      {/* 8. MAIN SHOPPING AREA */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-20">
+    {/* 8. MAIN SHOPPING AREA */}
+      <section className="bg-genz-bg pt-1 pb-10 px-4 sm:px-6">
         <div className="mb-12">
           <p className="text-genz-accent font-black text-xs uppercase tracking-[0.3em] mb-2">
             Personalized
@@ -230,6 +209,29 @@ export default function HomePage() {
         </div>
       </section>
 
+
+      {/* BANNER 3 */}
+      {banner3 && <BannerSection banners={[banner3]} />}
+
+      {/* 5. COLLECTION GRID */}
+      {collections.length > 0 && (
+        <CollectionGridSection collections={collections} />
+      )}
+
+      {/* 6. NEW ARRIVALS */}
+      <NewArrivals />
+
+      {/* 7. DYNAMIC PRODUCT LISTS */}
+      {productSections.map((section) => (
+        <ProductSliderSection key={section.id} section={section} />
+      ))}
+
+      {/* REMAINING BANNERS */}
+      {remainingBanners.length > 0 && (
+        <BannerSection banners={remainingBanners} />
+      )}
+
+      
       {/* 9. SEO TEXT BLOCKS */}
       {textSections.map((section) => (
         <TextBlockSection key={section.id} section={section} />
