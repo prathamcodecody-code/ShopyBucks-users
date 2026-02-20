@@ -30,8 +30,6 @@ export interface HomeFilterState {
   minPrice?: number;
   maxPrice?: number;
   stock?:    "in" | "out";
-  season?:   string;
-  occasion?: string;
 }
 
 // ─────────────────────────────────────────────
@@ -43,15 +41,20 @@ const DEFAULT_CATEGORY_ID = 1;
 function buildParams(filter: FullHomeFilterState): Record<string, any> {
   const p: Record<string, any> = { limit: 12 };
 
-  // ✅ categoryId included so category filter actually hits the backend
+  // ✅ Include all filter parameters
   if (filter.categoryId)                       p.categoryId = filter.categoryId;
+  if (filter.typeId)                           p.typeId     = filter.typeId;
+  if (filter.subtypeId)                        p.subtypeId  = filter.subtypeId;
   if (filter.sort && filter.sort !== "newest") p.sort       = filter.sort;
   if (filter.minPrice)                         p.minPrice   = filter.minPrice;
   if (filter.maxPrice)                         p.maxPrice   = filter.maxPrice;
   if (filter.stock)                            p.stock      = filter.stock;
-  if (filter.season)                           p.season     = filter.season;
-  if (filter.occasion)                         p.occasion   = filter.occasion;
+  
+  // ✅ Colors and sizes
+  if (filter.colors?.length)                   p.colors     = filter.colors.join(",");
+  if (filter.sizes?.length)                    p.sizes      = filter.sizes.join(",");
 
+  // ✅ Dynamic attributes (fabric, occasion, season, etc.)
   for (const [slug, values] of Object.entries(filter.attributes || {})) {
     if (values.length) p[slug] = values.join(",");
   }
@@ -65,10 +68,9 @@ function buildParams(filter: FullHomeFilterState): Record<string, any> {
 
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading,  setLoading]  = useState(true);
   const [sections, setSections] = useState<any[]>([]);
-
-  // ✅ Explicitly typed so TypeScript doesn't infer never[]
   const [categories, setCategories] = useState<Category[]>([]);
 
   // Fetch categories for the filter sidebar
@@ -84,18 +86,38 @@ export default function HomePage() {
     setLoading(true);
     try {
       const res = await api.get("/products", { params });
-      setProducts(res.data.products || []);
-    } catch {
+      const data = res.data;
+
+      // ✅ Handle both array and object responses
+      let list: Product[] = [];
+      if (Array.isArray(data)) {
+        list = data;
+        setTotal(list.length);
+      } else if (Array.isArray(data?.products)) {
+        list = data.products;
+        setTotal(data.total ?? list.length);
+      }
+
+      setProducts(list);
+    } catch (error) {
+      console.error("Error fetching products:", error);
       setProducts([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ✅ Initial load uses buildParams so categoryId: 1 is sent from the start
+  // ✅ Initial load with default category
   useEffect(() => {
     fetchProducts(
-      buildParams({ sort: "newest", attributes: {}, categoryId: DEFAULT_CATEGORY_ID })
+      buildParams({ 
+        sort: "newest", 
+        attributes: {}, 
+        colors: [],
+        sizes: [],
+        categoryId: DEFAULT_CATEGORY_ID 
+      })
     );
   }, [fetchProducts]);
 
@@ -108,9 +130,23 @@ export default function HomePage() {
   }, []);
 
   // ── Filter handler ─────────────────────────
-  const applyFilters = (filter: FullHomeFilterState) => {
+  const applyFilters = useCallback((filter: FullHomeFilterState) => {
+    console.log("Applying filters:", filter); // Debug log
     fetchProducts(buildParams(filter));
-  };
+  }, [fetchProducts]);
+
+  // ── Reset filters ─────────────────────────
+  const resetFilters = useCallback(() => {
+    fetchProducts(
+      buildParams({ 
+        sort: "newest", 
+        attributes: {}, 
+        colors: [],
+        sizes: [],
+        categoryId: DEFAULT_CATEGORY_ID 
+      })
+    );
+  }, [fetchProducts]);
 
   // ── Section bucketing ─────────────────────
   const banners         = sections.filter((s) => s.type === "BANNER");
@@ -147,7 +183,7 @@ export default function HomePage() {
       {/* 4. TOP CATEGORIES */}
       <TopCategories />
 
-    {/* 8. MAIN SHOPPING AREA */}
+      {/* 8. MAIN SHOPPING AREA */}
       <section className="bg-genz-bg pt-1 pb-10 px-4 sm:px-6">
         <div className="mb-12">
           <p className="text-genz-accent font-black text-xs uppercase tracking-[0.3em] mb-2">
@@ -156,16 +192,26 @@ export default function HomePage() {
           <h2 className="text-3xl md:text-5xl font-black text-genz-ink tracking-tighter uppercase">
             Products <span className="text-genz-accent">For You</span>
           </h2>
+          {!loading && (
+            <p className="text-sm text-genz-muted mt-2 font-bold">
+              {total} {total === 1 ? 'Product' : 'Products'} Found
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-12">
 
-          {/* Filter sidebar — full natural height, no scroll container */}
+          {/* Filter sidebar */}
           <aside className="w-full lg:w-1/4 self-start">
             <div className="bg-white border border-genz-border rounded-3xl p-6 shadow-sm">
               <HomeFilter
                 categories={categories}
-                initialFilters={{ categoryId: DEFAULT_CATEGORY_ID, attributes: {} }}
+                initialFilters={{ 
+                  categoryId: DEFAULT_CATEGORY_ID, 
+                  attributes: {},
+                  colors: [],
+                  sizes: []
+                }}
                 onFilter={applyFilters}
               />
             </div>
@@ -190,16 +236,15 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="text-center py-24 bg-white border border-dashed border-genz-border rounded-genz">
-                <p className="text-genz-muted font-bold uppercase tracking-widest text-sm">
+                <p className="text-genz-muted font-bold uppercase tracking-widest text-sm mb-2">
                   No drops match your vibe.
                 </p>
+                <p className="text-genz-muted text-xs mb-4">
+                  Try adjusting your filters or explore other categories
+                </p>
                 <button
-                  onClick={() =>
-                    fetchProducts(
-                      buildParams({ sort: "newest", attributes: {}, categoryId: DEFAULT_CATEGORY_ID })
-                    )
-                  }
-                  className="mt-4 text-xs text-genz-accent font-bold underline"
+                  onClick={resetFilters}
+                  className="mt-4 px-6 py-3 bg-genz-accent text-white font-bold rounded-full text-xs uppercase tracking-widest hover:bg-opacity-90 transition-all"
                 >
                   Reset filters
                 </button>
@@ -208,7 +253,6 @@ export default function HomePage() {
           </main>
         </div>
       </section>
-
 
       {/* BANNER 3 */}
       {banner3 && <BannerSection banners={[banner3]} />}
@@ -231,7 +275,6 @@ export default function HomePage() {
         <BannerSection banners={remainingBanners} />
       )}
 
-      
       {/* 9. SEO TEXT BLOCKS */}
       {textSections.map((section) => (
         <TextBlockSection key={section.id} section={section} />
