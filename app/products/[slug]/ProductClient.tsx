@@ -14,6 +14,19 @@ const IMG_BASE = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/products/`
   : "http://localhost:3030/uploads/products/";
 
+// ─────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────
+
+/**
+ * What your backend's computePricing returns inside each SKU:
+ *   sellingPrice  = final price the customer pays (AFTER discount)
+ *   discountedPrice = same as sellingPrice when there IS a discount, null otherwise
+ *   discountLabel  = e.g. "61% off"
+ *
+ * The MRP (before discount) lives on the SKU itself as `sku.price`
+ * (the raw price the seller set before any discount is applied).
+ */
 interface Pricing {
   sellingPrice: number;        // final/discounted price
   discountedPrice: number | null;
@@ -310,12 +323,11 @@ export default function ProductClient({ product }: any) {
             requiresVariantSelection={requiresVariantSelection}
             disabled={isOutOfStock}
           />
-
           <DeliveryCheck
-          productId={product.id}
-          orderAmount={product.finalPrice}
-            />
-          
+  productId={product.id}
+  orderAmount={product.finalPrice}
+/>
+
           {/* Product details */}
           <div className="space-y-6 pt-6 border-t border-genz-border">
             <h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
@@ -331,28 +343,94 @@ export default function ProductClient({ product }: any) {
                 </p>
               </div>
               <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
-                <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
-                  Technical Specs
-                </h3>
-                <div className="space-y-3 text-xs font-bold uppercase">
-                  <div className="flex justify-between border-b border-genz-border pb-2">
-                    <span className="text-genz-muted">Category</span>
-                    <span>{product.category?.name ?? "—"}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-genz-border pb-2">
-                    <span className="text-genz-muted">Weight</span>
-                    <span>{product.weight ? `${product.weight}g` : "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-genz-border pb-2">
-                    <span className="text-genz-muted">Season</span>
-                    <span>{product.seasonTags?.[0] || "All Season"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-genz-muted">Occasion</span>
-                    <span>{product.occasionTags?.[0] || "Casual"}</span>
-                  </div>
-                </div>
-              </div>
+  <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
+    Technical Specs
+  </h3>
+  <div className="space-y-3 text-xs font-bold uppercase">
+    {/* Category */}
+    <div className="flex justify-between border-b border-genz-border pb-2">
+      <span className="text-genz-muted">Category</span>
+      <span>{product.category?.name ?? "—"}</span>
+    </div>
+
+    {/* Type */}
+    {product.type?.name && (
+      <div className="flex justify-between border-b border-genz-border pb-2">
+        <span className="text-genz-muted">Type</span>
+        <span>{product.type.name}</span>
+      </div>
+    )}
+
+    {/* Subtype */}
+    {product.subtype?.name && (
+      <div className="flex justify-between border-b border-genz-border pb-2">
+        <span className="text-genz-muted">Subtype</span>
+        <span>{product.subtype.name}</span>
+      </div>
+    )}
+
+    {/* Weight */}
+    <div className="flex justify-between border-b border-genz-border pb-2">
+      <span className="text-genz-muted">Weight</span>
+      <span>{product.weight ? `${product.weight}g` : "N/A"}</span>
+    </div>
+
+    {/* Dimensions */}
+    <div className="flex justify-between border-b border-genz-border pb-2">
+      <span className="text-genz-muted">Dimensions</span>
+      <span>
+        {product.length && product.width && product.height
+          ? `${product.length} × ${product.width} × ${product.height} cm`
+          : "N/A"}
+      </span>
+    </div>
+
+    {/* Product Attributes (dynamic) */}
+    {product.productAttributeMaps && product.productAttributeMaps.length > 0 && (
+      <>
+        {product.productAttributeMaps
+          .filter((map: any) => map.variantId === 0) // Product-level attributes only
+          .filter((map: any) => 
+            map.attribute?.slug !== "color" && 
+            map.attribute?.slug !== "size"
+          ) // Exclude color/size as they're shown elsewhere
+          .map((map: any, idx: number) => (
+            <div 
+              key={idx} 
+              className="flex justify-between border-b border-genz-border pb-2"
+            >
+              <span className="text-genz-muted">
+                {map.attribute?.name || "Attribute"}
+              </span>
+              <span className="text-right">
+                {map.value?.value || "—"}
+              </span>
+            </div>
+          ))}
+      </>
+    )}
+
+    {/* Season Tags */}
+    <div className="flex justify-between border-b border-genz-border pb-2">
+      <span className="text-genz-muted">Season</span>
+      <span>
+        {product.seasonTags && product.seasonTags.length > 0
+          ? product.seasonTags.join(", ")
+          : "All Season"}
+      </span>
+    </div>
+
+    {/* Occasion Tags */}
+    <div className="flex justify-between">
+      <span className="text-genz-muted">Occasion</span>
+      <span>
+        {product.occasionTags && product.occasionTags.length > 0
+          ? product.occasionTags.join(", ")
+          : "Casual"}
+      </span>
+    </div>
+  </div>
+</div>
               <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
                 <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
                   Extras
@@ -384,4 +462,3 @@ export default function ProductClient({ product }: any) {
     </div>
   );
 }
-
