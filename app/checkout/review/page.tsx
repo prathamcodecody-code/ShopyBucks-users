@@ -73,6 +73,9 @@ export default function CheckoutReviewPage() {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
+  const [shippingFee, setShippingFee] = useState(0);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState("");
   const [couponError, setCouponError] = useState("");
 
   /* ================= GUARDS - WAIT FOR HYDRATION ================= */
@@ -131,6 +134,46 @@ export default function CheckoutReviewPage() {
     fetchData();
   }, [addressId, isHydrated, router]);
 
+  useEffect(() => {
+  if (!address || cartItems.length === 0) return;
+
+  const calculateShipping = async () => {
+    try {
+      setShippingLoading(true);
+      setShippingError("");
+
+      let totalShipping = 0;
+
+      for (const item of cartItems) {
+        const res = await api.post("/api/shipping/product-serviceability", {
+          productId: item.product.id,
+          dropPincode: address.pincode,
+          orderAmount: item.unitPrice * item.quantity,
+        });
+
+        if (!res.data.serviceable) {
+          throw new Error(
+            `${item.product.title} is not deliverable to your location`
+          );
+        }
+
+        totalShipping += res.data.shippingCharge;
+      }
+
+      setShippingFee(totalShipping);
+    } catch (err: any) {
+      setShippingError(
+        err?.response?.data?.message ||
+          "Delivery not available for one or more items"
+      );
+    } finally {
+      setShippingLoading(false);
+    }
+  };
+
+  calculateShipping();
+}, [address, cartItems]);
+
   /* ================= PRICE CALCULATIONS ================= */
   const subtotal = cartItems.reduce((sum, item) => {
     // ✅ Use unitPrice from cart (already discounted)
@@ -144,7 +187,7 @@ export default function CheckoutReviewPage() {
   }, 0);
 
   const productDiscount = mrpTotal - subtotal;
-  const deliveryFee = 0;
+  const deliveryFee = shippingFee;
   const totalBeforeDiscount = subtotal + deliveryFee;
   const finalTotal = Math.max(0, totalBeforeDiscount - discount);
 
@@ -471,9 +514,15 @@ export default function CheckoutReviewPage() {
                 )}
                 
                 <div className="flex justify-between text-sm font-bold text-genz-ink">
-                  <span>Delivery Fee</span>
-                  <span className="text-green-600">FREE</span>
-                </div>
+  <span>Delivery Fee</span>
+  {shippingLoading ? (
+    <span className="text-genz-muted">Calculating...</span>
+  ) : shippingFee > 0 ? (
+    <span>₹{shippingFee.toLocaleString()}</span>
+  ) : (
+    <span className="text-green-600">FREE</span>
+  )}
+</div>
 
                 {discount > 0 && (
                   <div className="flex justify-between text-sm font-bold text-green-600">
@@ -507,7 +556,7 @@ export default function CheckoutReviewPage() {
               <div className="mt-6 space-y-3">
                 <button
                   onClick={placeOrder}
-                  disabled={loading}
+                  disabled={loading || shippingLoading || !!shippingError}
                   className="w-full bg-genz-accent hover:brightness-110 text-white py-5 rounded-genz font-black text-lg shadow-lg shadow-genz-accent/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
                 >
                   {loading ? (
@@ -522,7 +571,11 @@ export default function CheckoutReviewPage() {
                     </>
                   )}
                 </button>
-
+{shippingError && (
+  <div className="mt-4 p-3 bg-red-50 border-2 border-red-200 rounded-xl text-xs font-bold text-red-600">
+    {shippingError}
+  </div>
+)}
                 <button
                   onClick={() => router.back()}
                   disabled={loading}
