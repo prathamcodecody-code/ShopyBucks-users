@@ -223,6 +223,8 @@ export default function CheckoutReviewPage() {
 
   /* ================= PLACE ORDER ================= */
   const placeOrder = async () => {
+     console.log("appliedCoupon state:", appliedCoupon); // ADD THIS
+  console.log("Sending body:", { addressId, paymentMethod, couponCode: appliedCoupon });
     try {
       setLoading(true);
       setError("");
@@ -232,7 +234,7 @@ export default function CheckoutReviewPage() {
         const res = await api.post("/orders", {
           addressId,
           paymentMethod,
-          couponCode: appliedCoupon || undefined,
+          couponCode: appliedCoupon,
         });
 
         // Important: Don't reset checkout until we're navigating away
