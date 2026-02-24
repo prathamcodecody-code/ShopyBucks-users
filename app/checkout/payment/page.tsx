@@ -160,19 +160,19 @@ export default function CheckoutPaymentPage() {
             <input
               type="radio"
               className="hidden"
-              checked={paymentMethod === "RAZORPAY"}
-              onChange={() => setPaymentMethod("RAZORPAY")}
+              checked={paymentMethod === "ONLINE"}
+              onChange={() => setPaymentMethod("ONLINE")}
             />
             <div className="flex items-center gap-5">
-              <div className={`p-4 rounded-2xl ${paymentMethod === "RAZORPAY" ? "bg-genz-accent text-white" : "bg-genz-bg text-genz-muted"}`}>
+              <div className={`p-4 rounded-2xl ${paymentMethod === "ONLINE" ? "bg-genz-accent text-white" : "bg-genz-bg text-genz-muted"}`}>
                 <HiOutlineCreditCard size={28} />
               </div>
               <div className="flex-1">
                 <p className="font-black text-lg">Online Payment</p>
                 <p className="text-sm text-genz-muted font-medium">UPI, Cards, or Net Banking</p>
               </div>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === "RAZORPAY" ? "border-genz-accent" : "border-genz-border"}`}>
-                {paymentMethod === "RAZORPAY" && <div className="w-3 h-3 bg-genz-accent rounded-full" />}
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === "ONLINE" ? "border-genz-accent" : "border-genz-border"}`}>
+                {paymentMethod === "ONLINE" && <div className="w-3 h-3 bg-genz-accent rounded-full" />}
               </div>
             </div>
           </label>
@@ -210,7 +210,7 @@ export default function CheckoutPaymentPage() {
         <div className="mt-12 flex flex-wrap justify-center items-center gap-8 opacity-40 grayscale contrast-125">
            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="MC" className="h-6" />
            <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/Visa.svg" alt="Visa" className="h-4" />
-           <img src="https://upload.wikimedia.org/wikipedia/commons/8/89/Razorpay_logo.svg" alt="Razorpay" className="h-5" />
+           <img src="https://easebuzz.in/assets/images/logo.png" alt="Easebuzz" className="h-5" />
         </div>
       </div>
     </div>
