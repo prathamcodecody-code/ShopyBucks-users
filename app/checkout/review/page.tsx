@@ -134,49 +134,49 @@ export default function CheckoutReviewPage() {
     fetchData();
   }, [addressId, isHydrated, router]);
 
+  /* ================= CALCULATE SHIPPING ================= */
   useEffect(() => {
-  if (!address || cartItems.length === 0) return;
+    if (!address || cartItems.length === 0) return;
 
-  const calculateShipping = async () => {
-    try {
-      setShippingLoading(true);
-      setShippingError("");
+    const calculateShipping = async () => {
+      try {
+        setShippingLoading(true);
+        setShippingError("");
 
-      let totalShipping = 0;
+        let totalShipping = 0;
 
-      for (const item of cartItems) {
-        const res = await api.post("/api/shipping/product-serviceability", {
-          productId: item.product.id,
-          dropPincode: address.pincode,
-          orderAmount: item.unitPrice * item.quantity,
-        });
+        for (const item of cartItems) {
+          const res = await api.post("/api/shipping/product-serviceability", {
+            productId: item.product.id,
+            dropPincode: address.pincode,
+            orderAmount: item.unitPrice * item.quantity,
+          });
 
-        if (!res.data.serviceable) {
-          throw new Error(
-            `${item.product.title} is not deliverable to your location`
-          );
+          if (!res.data.serviceable) {
+            throw new Error(
+              `${item.product.title} is not deliverable to your location`
+            );
+          }
+
+          totalShipping += res.data.shippingCharge;
         }
 
-        totalShipping += res.data.shippingCharge;
+        setShippingFee(totalShipping);
+      } catch (err: any) {
+        setShippingError(
+          err?.response?.data?.message ||
+            "Delivery not available for one or more items"
+        );
+      } finally {
+        setShippingLoading(false);
       }
+    };
 
-      setShippingFee(totalShipping);
-    } catch (err: any) {
-      setShippingError(
-        err?.response?.data?.message ||
-          "Delivery not available for one or more items"
-      );
-    } finally {
-      setShippingLoading(false);
-    }
-  };
-
-  calculateShipping();
-}, [address, cartItems]);
+    calculateShipping();
+  }, [address, cartItems]);
 
   /* ================= PRICE CALCULATIONS ================= */
   const subtotal = cartItems.reduce((sum, item) => {
-    // ✅ Use unitPrice from cart (already discounted)
     const unitPrice = Number(item.unitPrice);
     return sum + unitPrice * item.quantity;
   }, 0);
@@ -223,8 +223,9 @@ export default function CheckoutReviewPage() {
 
   /* ================= PLACE ORDER ================= */
   const placeOrder = async () => {
-     console.log("appliedCoupon state:", appliedCoupon); // ADD THIS
-  console.log("Sending body:", { addressId, paymentMethod, couponCode: appliedCoupon });
+    console.log("appliedCoupon state:", appliedCoupon);
+    console.log("Sending body:", { addressId, paymentMethod, couponCode: appliedCoupon });
+    
     try {
       setLoading(true);
       setError("");
@@ -234,7 +235,7 @@ export default function CheckoutReviewPage() {
         const res = await api.post("/orders", {
           addressId,
           paymentMethod,
-          couponCode: appliedCoupon,
+          couponCode: appliedCoupon || undefined,
         });
 
         // Important: Don't reset checkout until we're navigating away
@@ -243,60 +244,63 @@ export default function CheckoutReviewPage() {
         return;
       }
 
-      // Online Payment Flow
+      // Online Payment Flow (Easebuzz)
       const orderRes = await api.post("/orders", {
         addressId,
-        paymentMethod,
+        paymentMethod: "ONLINE",
         couponCode: appliedCoupon || undefined,
       });
 
-      const orderId = orderRes.data.orderId;
+      const { payment } = orderRes.data;
 
-      const rpRes = await api.post("/payments/razorpay/create-order", {
-        orderId,
+      // Validate payment data
+      if (!payment || !payment.paymentUrl || !payment.payload) {
+        throw new Error("Invalid payment data received from server");
+      }
+
+      // Show redirect message
+      toast.loading("Redirecting to payment gateway...", { duration: 3000 });
+
+      // Auto-submit Easebuzz form
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = payment.paymentUrl;
+
+      Object.entries(payment.payload).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
       });
 
-      const options = {
-        key: rpRes.data.key,
-        amount: rpRes.data.amount * 100,
-        currency: "INR",
-        name: "ShopyBucks",
-        description: `Order #${orderId}`,
-        order_id: rpRes.data.razorpayOrderId,
-        handler: async (response: any) => {
-          try {
-            const verify = await api.post("/payments/razorpay/verify", response);
-            if (verify.data.success) {
-              // Navigate to success page - it will reset checkout
-              router.replace(`/checkout/success?orderId=${orderId}&type=ONLINE`);
-            } else {
-              setError("Payment verification failed");
-              setLoading(false);
-            }
-          } catch (err) {
-            setError("Payment verification failed");
-            setLoading(false);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setLoading(false);
-            toast.error("Payment cancelled");
-          }
-        },
-        theme: { color: "#FF9900" },
-      };
+      document.body.appendChild(form);
+      form.submit();
 
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-
+      // Timeout protection - if redirect fails, reset after 5 seconds
+      setTimeout(() => {
+        if (loading) {
+          setLoading(false);
+          setError("Payment gateway redirect failed. Please try again.");
+          toast.error("Redirect failed. Please try again.");
+        }
+      }, 5000);
+      
+      // Note: Loading state will remain true as user is being redirected
+      // Don't set loading to false here since we're leaving the page
+      
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to place order");
-      toast.error(err?.response?.data?.message || "Failed to place order");
       setLoading(false);
+      toast.error(err?.response?.data?.message || "Failed to place order");
+      console.error("Order placement error:", err);
     }
+    // No finally block needed - on success, user redirects away
+    // On error, we manually reset loading state
   };
 
+  /* ================= LOADING STATES ================= */
+  
   // Wait for hydration
   if (!isHydrated) {
     return (
@@ -326,6 +330,7 @@ export default function CheckoutReviewPage() {
     return null;
   }
 
+  /* ================= MAIN RENDER ================= */
   return (
     <div className="bg-genz-bg min-h-screen py-12 px-4 text-genz-ink">
       <div className="max-w-5xl mx-auto">
@@ -368,7 +373,7 @@ export default function CheckoutReviewPage() {
                     {paymentMethod === "COD" ? "Cash on Delivery" : "Online Payment"}
                   </p>
                   <p className="text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-lg inline-block uppercase tracking-tight">
-                    {paymentMethod === "COD" ? "Pay at Doorstep" : "Razorpay Secure"}
+                    {paymentMethod === "COD" ? "Pay at Doorstep" : "Easebuzz Secure"}
                   </p>
                 </div>
               </div>
@@ -385,7 +390,6 @@ export default function CheckoutReviewPage() {
               
               <div className="divide-y-2 divide-genz-border">
                 {cartItems.map((item) => {
-                  // ✅ Use unitPrice (already discounted) from cart
                   const unitPrice = Number(item.unitPrice);
                   const mrp = Number(item.mrp || item.unitPrice);
                   const hasDiscount = mrp > unitPrice;
@@ -516,15 +520,15 @@ export default function CheckoutReviewPage() {
                 )}
                 
                 <div className="flex justify-between text-sm font-bold text-genz-ink">
-  <span>Delivery Fee</span>
-  {shippingLoading ? (
-    <span className="text-genz-muted">Calculating...</span>
-  ) : shippingFee > 0 ? (
-    <span>₹{shippingFee.toLocaleString()}</span>
-  ) : (
-    <span className="text-green-600">FREE</span>
-  )}
-</div>
+                  <span>Delivery Fee</span>
+                  {shippingLoading ? (
+                    <span className="text-genz-muted">Calculating...</span>
+                  ) : shippingFee > 0 ? (
+                    <span>₹{shippingFee.toLocaleString()}</span>
+                  ) : (
+                    <span className="text-green-600">FREE</span>
+                  )}
+                </div>
 
                 {discount > 0 && (
                   <div className="flex justify-between text-sm font-bold text-green-600">
@@ -555,6 +559,12 @@ export default function CheckoutReviewPage() {
                 </div>
               )}
 
+              {shippingError && (
+                <div className="mt-4 p-3 bg-red-50 border-2 border-red-200 rounded-xl text-xs font-bold text-red-600">
+                  {shippingError}
+                </div>
+              )}
+
               <div className="mt-6 space-y-3">
                 <button
                   onClick={placeOrder}
@@ -573,11 +583,7 @@ export default function CheckoutReviewPage() {
                     </>
                   )}
                 </button>
-{shippingError && (
-  <div className="mt-4 p-3 bg-red-50 border-2 border-red-200 rounded-xl text-xs font-bold text-red-600">
-    {shippingError}
-  </div>
-)}
+
                 <button
                   onClick={() => router.back()}
                   disabled={loading}
