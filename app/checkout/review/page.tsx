@@ -222,8 +222,6 @@ export default function CheckoutReviewPage() {
   };
 
   /* ================= PLACE ORDER ================= */
-// In your CheckoutReviewPage.tsx - CORRECTED placeOrder function
-
 const placeOrder = async () => {
   console.log("appliedCoupon state:", appliedCoupon);
   console.log("Sending body:", { addressId, paymentMethod, couponCode: appliedCoupon });
@@ -251,53 +249,29 @@ const placeOrder = async () => {
       couponCode: appliedCoupon || undefined,
     });
 
-    const { payment } = orderRes.data;
+    const payment = orderRes.data.payment ?? orderRes.data;
 
     console.log("Payment data received:", payment);
+    if (!payment?.paymentUrl) {
+  console.error("Unexpected payment response:", orderRes.data);
+  throw new Error("Payment gateway initialization failed");
+}
 
     // Validate payment data
-    if (!payment || !payment.paymentUrl || !payment.payload) {
+    if (!payment || !payment.paymentUrl) {
       throw new Error("Invalid payment data received from server");
     }
 
-    // ✅ CRITICAL FIX: Ensure we're using the correct Easebuzz URL format
-    // Easebuzz expects the form to be submitted to their initiateLink endpoint
-    const easebuzzUrl = payment.paymentUrl;
+    // ✅ SIMPLIFIED: Just redirect to the payment URL
+    // The backend already got the access key and constructed the full URL
+    console.log("Redirecting to:", payment.paymentUrl);
     
-    // Show redirect message
-    toast.loading("Redirecting to payment gateway...", { duration: 3000 });
+    toast.loading("Redirecting to payment gateway...", { duration: 2000 });
 
-    // ✅ Create and auto-submit HTML form to Easebuzz
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = easebuzzUrl;
-
-    // Add all payment parameters as hidden inputs
-    Object.entries(payment.payload).forEach(([key, value]) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = key;
-      input.value = String(value);
-      form.appendChild(input);
-    });
-
-    console.log("Submitting form to:", easebuzzUrl);
-    console.log("Form payload:", payment.payload);
-
-    // Append form to body and submit
-    document.body.appendChild(form);
-    form.submit();
-
-    // Timeout protection - if redirect fails, reset after 10 seconds
+    // Small delay for user to see the loading message
     setTimeout(() => {
-      setLoading(false);
-      setError("Payment gateway redirect failed. Please try again.");
-      toast.error("Redirect failed. Please try again.");
-      // Remove the form
-      if (form.parentNode) {
-        form.parentNode.removeChild(form);
-      }
-    }, 10000);
+      window.location.href = payment.paymentUrl;
+    }, 500);
     
   } catch (err: any) {
     setError(err?.response?.data?.message || "Failed to place order");
@@ -305,8 +279,8 @@ const placeOrder = async () => {
     toast.error(err?.response?.data?.message || "Failed to place order");
     console.error("Order placement error:", err);
   }
-};
-  /* ================= LOADING STATES ================= */
+}; 
+ /* ================= LOADING STATES ================= */
   
   // Wait for hydration
   if (!isHydrated) {
