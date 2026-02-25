@@ -15,6 +15,7 @@ import {
   HiOutlineReceiptPercent,
   HiOutlineTruck,
   HiOutlineTag,
+  HiOutlineExclamationTriangle,
 } from "react-icons/hi2";
 
 /* ---------- STATUS HELPER ---------- */
@@ -30,7 +31,16 @@ function getOrderStatusClass(status?: string) {
     default:          return "bg-gray-50 text-gray-600 border-gray-100";
   }
 }
+function deriveDeliveryStatus(sellerOrders: any[]) {
+  if (!sellerOrders?.length) return "PENDING";
 
+  if (sellerOrders.every(o => o.status === "DELIVERED")) return "DELIVERED";
+  if (sellerOrders.some(o => o.status === "SHIPPED")) return "SHIPPED";
+  if (sellerOrders.some(o => o.status === "PACKED")) return "PACKED";
+  if (sellerOrders.some(o => o.status === "ACCEPTED")) return "ACCEPTED";
+
+  return "PENDING";
+}
 export default function OrderDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -43,9 +53,23 @@ export default function OrderDetailsPage() {
   const fetchOrder = async () => {
     try {
       const res = await api.get(`/orders/my/${id}`);
+      console.log("📦 Full Order Response:", JSON.stringify(res.data, null, 2));
+      console.log("📦 Seller Orders:", res.data.sellerOrders);
+      
+      // Debug each seller order
+      res.data.sellerOrders?.forEach((so: any, index: number) => {
+        console.log(`📦 Seller Order ${index}:`, {
+          id: so.id,
+          status: so.status,
+          hasShipment: !!so.shipment,
+          shipmentData: so.shipment,
+        });
+      });
+      
       setOrder(res.data);
       setItems(res.data.orderitem ?? []);
-    } catch {
+    } catch (err) {
+      console.error("❌ Error fetching order:", err);
       setOrder(null);
     } finally {
       setLoading(false);
@@ -78,9 +102,14 @@ export default function OrderDetailsPage() {
   const paymentMethod      = order?.paymentMethod ?? (order?.isCOD ? "COD" : "ONLINE");
   const isCOD              = paymentMethod === "COD";
   const paymentMethodLabel = isCOD ? "Cash on Delivery" : "Online Payment";
+  const deliveryStatus = deriveDeliveryStatus(order.sellerOrders);
   const paymentStatusLabel = isCOD
-    ? order.status === "DELIVERED" ? "Paid on Delivery" : "Payment Pending"
-    : "Payment Confirmed";
+  ? deliveryStatus === "DELIVERED"
+    ? "Paid on Delivery"
+    : "Payment Pending"
+  : order.paymentStatus === "PAID"
+    ? "Payment Confirmed"
+    : "Payment Pending";
 
   /* ── Price breakdown ── */
   const totalAmount    = Number(order.totalAmount ?? 0);
@@ -104,6 +133,12 @@ export default function OrderDetailsPage() {
   /* ── Address snapshot (matches your backend shape) ── */
   const addr = order.address ?? {};
 
+  // Check if any seller order has shipment data or is in shipped/delivered status
+  const hasShippedOrders = order.sellerOrders?.some((so: any) => 
+    so.status === "SHIPPED" || so.status === "DELIVERED"
+  );
+  const hasShipmentData = order.sellerOrders?.some((so: any) => so.shipment?.trackingId);
+
   return (
   <div className="bg-genz-bg min-h-screen py-10">
     <div className="max-w-4xl mx-auto px-4 space-y-8">
@@ -126,7 +161,7 @@ export default function OrderDetailsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-black text-genz-ink tracking-tighter">#SB-{order.id}</h1>
             <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-[0.15em] ${getOrderStatusClass(order.status)}`}>
-              {order.status}
+              {deliveryStatus}
             </span>
           </div>
           <p className="text-[11px] font-bold text-genz-muted mt-2 uppercase tracking-widest flex items-center gap-2">
@@ -153,7 +188,7 @@ export default function OrderDetailsPage() {
 
       {/* PROGRESS TRACKING */}
       <div className="bg-white rounded-[2rem] border border-genz-border p-8 shadow-sm">
-        <OrderTracking status={order.status} />
+        <OrderTracking status={deliveryStatus} />
       </div>
 
       {/* TWO-COLUMN INFO GRID */}
@@ -178,7 +213,7 @@ export default function OrderDetailsPage() {
           </div>
         </div>
 
-        {/* PAYMENT */}
+        {/* PAYMENT & SHIPMENT */}
         <div className="bg-white rounded-[2rem] border border-genz-border p-8 shadow-sm">
           <h2 className="text-[11px] font-black text-genz-muted uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
             <HiOutlineCreditCard size={18} className="text-genz-accent" /> Payment
@@ -198,6 +233,100 @@ export default function OrderDetailsPage() {
                 {paymentStatusLabel}
               </span>
             </div>
+            
+            {/* ✅ IMPROVED SHIPMENT TRACKING DISPLAY WITH FALLBACK */}
+            {hasShippedOrders && (
+              <div className="pt-4 space-y-3 border-t border-genz-border mt-4">
+                <h3 className="text-[10px] font-black text-genz-muted uppercase tracking-widest flex items-center gap-2">
+                  <HiOutlineTruck size={16} />
+                  Shipment Details
+                </h3>
+                
+                {hasShipmentData ? (
+                  // Display shipment data if available
+                  order.sellerOrders.map((so: any) => (
+                    so.shipment?.trackingId && (
+                      <div
+                        key={so.id}
+                        className="bg-genz-bg border border-genz-border rounded-xl p-4 space-y-2"
+                      >
+                        <div className="flex items-start gap-3">
+                          <HiOutlineTruck className="text-genz-accent mt-0.5 flex-shrink-0" size={20} />
+                          <div className="flex-1 space-y-2">
+                            {/* Tracking ID */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[10px] font-black text-genz-muted uppercase tracking-widest">Tracking ID:</span>
+                              <span className="text-xs font-black text-genz-ink bg-white px-3 py-1 rounded-md border border-genz-border font-mono">
+                                {so.shipment.trackingId}
+                              </span>
+                            </div>
+                            
+                            {/* ETA */}
+                            {(so.shippingTatMin || so.shippingTatMax) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-genz-muted uppercase tracking-widest">ETA:</span>
+                                <span className="text-xs font-bold text-genz-ink">
+                                  {so.shippingTatMin || '?'}–{so.shippingTatMax || '?'} days
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Courier */}
+                            {so.shipment.courier && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-genz-muted uppercase tracking-widest">Courier:</span>
+                                <span className="text-xs font-black text-genz-ink">{so.shipment.courier}</span>
+                              </div>
+                            )}
+                            
+                            {/* Shipment Status */}
+                            {so.shipment.status && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-genz-muted uppercase tracking-widest">Status:</span>
+                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${getOrderStatusClass(so.shipment.status)}`}>
+                                  {so.shipment.status}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  ))
+                ) : (
+                  // Fallback display when shipment data is missing
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <HiOutlineExclamationTriangle className="text-amber-500 mt-0.5 flex-shrink-0" size={20} />
+                      <div className="flex-1 space-y-2">
+                        <p className="text-xs font-bold text-amber-800">
+                          Your order has been shipped!
+                        </p>
+                        <p className="text-[11px] text-amber-700">
+                          Tracking information will be available soon. Please check back later or contact support for updates.
+                        </p>
+                        
+                        {/* Show estimated delivery time if available */}
+                        {order.sellerOrders?.some((so: any) => so.shippingTatMin || so.shippingTatMax) && (
+                          <div className="pt-2">
+                            {order.sellerOrders.map((so: any) => (
+                              (so.shippingTatMin || so.shippingTatMax) && (
+                                <div key={so.id} className="flex items-center gap-2">
+                                  <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Expected Delivery:</span>
+                                  <span className="text-xs font-bold text-amber-900">
+                                    {so.shippingTatMin || '?'}–{so.shippingTatMax || '?'} days
+                                  </span>
+                                </div>
+                              )
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -344,6 +473,15 @@ export default function OrderDetailsPage() {
       </div>
 
     </div>
+
+    {/* Review Modal */}
+    {reviewProduct && (
+      <ReviewModal
+        product={reviewProduct.product}
+        orderId={reviewProduct.orderId}
+        onClose={() => setReviewProduct(null)}
+      />
+    )}
   </div>
 );
 }
