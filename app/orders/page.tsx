@@ -15,6 +15,18 @@ import {
   HiOutlineCreditCard,
 } from "react-icons/hi2";
 
+// ✅ Helper to derive delivery status from seller orders
+function deriveDeliveryStatus(sellerOrders: any[]) {
+  if (!sellerOrders?.length) return "PENDING";
+
+  if (sellerOrders.every(o => o.status === "DELIVERED")) return "DELIVERED";
+  if (sellerOrders.some(o => o.status === "SHIPPED")) return "SHIPPED";
+  if (sellerOrders.some(o => o.status === "PACKED")) return "PACKED";
+  if (sellerOrders.some(o => o.status === "ACCEPTED")) return "ACCEPTED";
+
+  return "PENDING";
+}
+
 export default function OrdersPage() {
   const router = useRouter();
 
@@ -31,9 +43,11 @@ export default function OrdersPage() {
       const res = await api.get("/orders/my", {
         params: { page, limit },
       });
+      console.log("📦 Orders fetched:", res.data.orders);
       setOrders(res.data.orders || []);
       setPages(res.data.pages || 1);
-    } catch {
+    } catch (err) {
+      console.error("❌ Failed to fetch orders:", err);
       setOrders([]);
     } finally {
       setLoading(false);
@@ -48,10 +62,12 @@ export default function OrdersPage() {
     switch (status) {
       case "PENDING":
         return "bg-amber-50 text-amber-600 border-amber-100";
-      case "CONFIRMED":
+      case "ACCEPTED":
         return "bg-blue-50 text-blue-600 border-blue-100";
-      case "SHIPPED":
+      case "PACKED":
         return "bg-indigo-50 text-indigo-600 border-indigo-100";
+      case "SHIPPED":
+        return "bg-teal-50 text-teal-600 border-teal-100";
       case "DELIVERED":
         return "bg-emerald-50 text-emerald-600 border-emerald-100";
       case "CANCELLED":
@@ -100,7 +116,9 @@ export default function OrdersPage() {
         ) : (
           <div className="space-y-4">
             {orders.map((o) => {
-              const statusClass = getStatusClass(o.status);
+              // ✅ Derive the actual delivery status from seller orders
+              const deliveryStatus = deriveDeliveryStatus(o.sellerOrders);
+              const statusClass = getStatusClass(deliveryStatus);
 
               // ── Derived price values ──────────────────────────
               const totalAmount      = Number(o.totalAmount ?? 0);
@@ -147,8 +165,9 @@ export default function OrdersPage() {
                         </div>
                       )}
 
+                      {/* ✅ Show derived delivery status instead of main order status */}
                       <span className={`text-[10px] px-3 py-1.5 rounded-lg font-black border uppercase tracking-tight ${statusClass}`}>
-                        {o.status}
+                        {deliveryStatus}
                       </span>
                       <HiOutlineChevronRight className="text-gray-300 group-hover:text-amazon-orange group-hover:translate-x-1 transition-all" size={20} />
                     </div>
