@@ -160,7 +160,7 @@ export default function OrderDetailsPage() {
         <div className="relative z-10">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-black text-genz-ink tracking-tighter">#SB-{order.id}</h1>
-            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-[0.15em] ${getOrderStatusClass(order.status)}`}>
+            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-[0.15em] ${getOrderStatusClass(deliveryStatus)}`}>
               {deliveryStatus}
             </span>
           </div>
@@ -228,7 +228,7 @@ export default function OrderDetailsPage() {
             <div className="flex justify-between items-center">
               <span className="text-[11px] font-bold text-genz-muted uppercase tracking-widest">Status</span>
               <span className={`text-[11px] font-black uppercase tracking-tighter ${
-                isCOD && order.status !== "DELIVERED" ? "text-amber-500" : "text-green-500"
+                isCOD && deliveryStatus !== "DELIVERED" ? "text-amber-500" : "text-green-500"
               }`}>
                 {paymentStatusLabel}
               </span>
@@ -378,7 +378,7 @@ export default function OrderDetailsPage() {
                     )}
                   </div>
 
-                  {order.status === "DELIVERED" && (
+                  {deliveryStatus === "DELIVERED" && (
                     <button
                       onClick={() => setReviewProduct({ product: item.product, orderId: order.id })}
                       className="text-[10px] font-black text-genz-accent uppercase tracking-widest hover:translate-x-1 transition-transform flex items-center gap-1 pt-2"
@@ -446,12 +446,16 @@ export default function OrderDetailsPage() {
 
       {/* ACTION BUTTONS */}
       <div className="flex flex-col sm:flex-row gap-4 pt-4">
-        {order.status === "PENDING" && (
+        {deliveryStatus === "PENDING" && (
           <button
             onClick={async () => {
-              if (!confirm("Are you sure?")) return;
-              await api.put(`/orders/${order.id}/cancel`);
-              fetchOrder();
+              if (!confirm("Are you sure you want to cancel this order?")) return;
+              try {
+                await api.put(`/orders/${order.id}/cancel`);
+                fetchOrder();
+              } catch (error) {
+                console.error("Failed to cancel order:", error);
+              }
             }}
             className="flex-1 px-8 py-5 bg-white border border-red-100 text-red-500 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-red-50 transition-all flex items-center justify-center gap-2"
           >
@@ -459,11 +463,15 @@ export default function OrderDetailsPage() {
           </button>
         )}
 
-        {["DELIVERED", "CANCELLED"].includes(order.status) && (
+        {["DELIVERED", "CANCELLED"].includes(deliveryStatus) && (
           <button
             onClick={async () => {
-              await api.post(`/orders/${order.id}/reorder`);
-              router.push("/cart");
+              try {
+                await api.post(`/orders/${order.id}/reorder`);
+                router.push("/cart");
+              } catch (error) {
+                console.error("Failed to reorder:", error);
+              }
             }}
             className="flex-1 px-8 py-5 bg-genz-ink text-white rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.2em] hover:opacity-90 transition-all shadow-2xl active:scale-[0.98] flex items-center justify-center gap-3"
           >
@@ -480,6 +488,11 @@ export default function OrderDetailsPage() {
         product={reviewProduct.product}
         orderId={reviewProduct.orderId}
         onClose={() => setReviewProduct(null)}
+        onSuccess={() => {
+          setReviewProduct(null);
+          // Optionally refetch order to update review status
+          fetchOrder();
+        }}
       />
     )}
   </div>
