@@ -81,7 +81,7 @@ export default function ProductCard({ product }: { product?: Product & { __spons
 
   if (!product) return null;
 
-  const isSponsored = product.isSponsored || product.__sponsored;
+  const isSponsored = product.__sponsored;
   const img1 = buildImageUrl(product.img1);
   const img2 = buildImageUrl(product.img2);
   const productUrl = `/${product.category?.slug}/${product.slug}`;
@@ -169,3 +169,4 @@ export default function ProductCard({ product }: { product?: Product & { __spons
     </div>
   );
 }
+
