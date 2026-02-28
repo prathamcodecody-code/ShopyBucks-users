@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Product } from "@/lib/product";
 
 // ================= IMAGE URL HELPER =================
-// Copied from your ProductCard to fix the missing image issue
 function buildImageUrl(img: string | null | undefined): string {
   if (!img) return "/placeholder.png";
   const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -47,19 +46,20 @@ export default function SponsoredProducts() {
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {products.map((p) => {
           const imgUrl = buildImageUrl(p.img1);
-          const productUrl = `/product/${p.slug}`;
+          
+          // FIXED URL LOGIC: Fallback to "product" if category slug is missing
+          const categoryPath = p.category?.slug || "product";
+          const productUrl = `/${categoryPath}/${p.slug}`;
 
           return (
             <div 
               key={p.id} 
               className="group flex flex-col bg-genz-card border border-genz-border rounded-genz overflow-hidden hover:shadow-md transition-shadow h-full"
             >
-              {/* Top Offer Badge (Mimicking the Pink Header in your image) */}
               <div className="bg-pink-50 text-pink-600 text-[11px] font-bold py-1.5 text-center">
                 Special Offer
               </div>
 
-              {/* Product Info & Image Area */}
               <Link href={productUrl} className="flex-1 p-4 flex flex-col items-center justify-center">
                 <div className="relative w-full h-24 mb-3">
                    <img
@@ -79,7 +79,6 @@ export default function SponsoredProducts() {
                 </div>
               </Link>
 
-              {/* Buy Now Button (Same size/position as the blue button in image) */}
               <div className="px-3 pb-3">
                 <Link 
                   href={productUrl}
