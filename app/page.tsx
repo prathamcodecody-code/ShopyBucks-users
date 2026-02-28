@@ -175,11 +175,11 @@ export default function HomePage() {
       {/* BANNER 1 */}
       {banner1 && <BannerSection banners={[banner1]} />}
 
-      {/*Sponsored Products Section*/}
-      <SponsoredProducts />
-
       {/* 3. TRENDING NOW */}
       <TrendingNow />
+      
+      {/*Sponsored Products Section*/}
+      <SponsoredProducts />
 
       {/* BANNER 2 */}
       {banner2 && <BannerSection banners={[banner2]} />}
