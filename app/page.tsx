@@ -14,6 +14,7 @@ import BannerSection from "@/components/ui/BannerSection";
 import CollectionGridSection from "@/components/ui/CollectionGridSection";
 import ProductSliderSection from "@/components/ui/ProductSliderSection";
 import TextBlockSection from "@/components/ui/TextBlockSection";
+import SponsoredProducts from "@/components/Home/SponsoredProducts";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -173,6 +174,9 @@ export default function HomePage() {
 
       {/* BANNER 1 */}
       {banner1 && <BannerSection banners={[banner1]} />}
+
+      {/*Sponsored Products Section*/}
+      <SponsoredProducts />
 
       {/* 3. TRENDING NOW */}
       <TrendingNow />
