@@ -178,9 +178,11 @@ export default function HomePage() {
       {/* 3. TRENDING NOW */}
       <TrendingNow />
       
-      {/*Sponsored Products Section*/}
+     {/*Sponsored Products Section*/}
+     <section className="mb-8 pt-10">
       <SponsoredProducts />
-
+      </section>
+      
       {/* BANNER 2 */}
       {banner2 && <BannerSection banners={[banner2]} />}
 
