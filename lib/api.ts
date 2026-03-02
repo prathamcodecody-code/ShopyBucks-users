@@ -72,12 +72,6 @@ api.interceptors.response.use(
         return;
       }
 
-      // 404 → optional
-      if (status === 404) {
-        window.location.replace("/404");
-        return;
-      }
-
       // 500+
       if (status >= 500) {
         window.location.replace("/error");
@@ -88,3 +82,4 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
