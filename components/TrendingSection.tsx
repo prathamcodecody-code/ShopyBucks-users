@@ -16,8 +16,8 @@ export default function TrendingNow() {
       try {
         const res = await api.get("/products", {
           params: { 
-            sort: "random", // Set to random to change items on refresh
-            limit: 12       // Increased limit to 12 products
+            sort: "random", 
+            limit: 15 // Changed to 15 (multiple of 5)
           },
         });
         const data = res.data?.products ?? res.data ?? [];
@@ -31,16 +31,16 @@ export default function TrendingNow() {
     fetchTrending();
   }, []);
 
-  /* ---------------- LOADING STATE (Matches 3/4 Aspect Ratio) ---------------- */
+  /* ---------------- LOADING STATE (Updated to 5 Cols) ---------------- */
   if (loading) {
     return (
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 py-12">
         <div className="h-8 w-48 bg-genz-border animate-pulse rounded-full mb-10" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {/* Increased skeleton count to match the new layout */}
-          {[...Array(8)].map((_, i) => (
+        {/* Adjusted to grid-cols-5 */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {[...Array(10)].map((_, i) => (
             <div key={i} className="space-y-4">
-              <div className="aspect-[3/4] bg-genz-border/50 animate-pulse rounded-genz" />
+              <div className="aspect-square bg-genz-border/50 animate-pulse rounded-genz" />
               <div className="h-3 w-3/4 bg-genz-border/50 animate-pulse rounded-full" />
               <div className="h-3 w-1/2 bg-genz-border/50 animate-pulse rounded-full" />
             </div>
@@ -55,7 +55,8 @@ export default function TrendingNow() {
   /* ---------------- MAIN UI ---------------- */
   return (
     <section className="bg-genz-bg pt-1 pb-1 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
+      {/* Increased max-width to accommodate 5 cards comfortably */}
+      <div className="max-w-[1600px] mx-auto">
         
         {/* HEADER */}
         <div className="flex items-end justify-between mb-10">
@@ -82,16 +83,16 @@ export default function TrendingNow() {
           </Link>
         </div>
 
-        {/* GRID: 2 Columns on Mobile, 4 on PC */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* GRID: Responsive steps to reach 5 columns */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
           {items.map((product) => (
-            <div key={product.id} className="transition-all duration-500">
+            <div key={product.id} className="transition-all duration-500 h-full">
               <ProductCard product={product} />
             </div>
           ))}
         </div>
 
-        {/* MODERN FOOTER: Minimalist Vibe Badges */}
+        {/* MODERN FOOTER */}
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
           <Badge item={{
             icon: <Zap size={20} />,
@@ -114,7 +115,6 @@ export default function TrendingNow() {
   );
 }
 
-/* --- REUSABLE BADGE SUB-COMPONENT --- */
 function Badge({ item }: { item: { icon: any, title: string, desc: string } }) {
   return (
     <div className="bg-white border border-genz-border p-6 rounded-genz flex items-center gap-5 hover:border-genz-accent transition-all duration-300 group hover:shadow-xl hover:shadow-genz-accent/5 cursor-default">
@@ -128,4 +128,3 @@ function Badge({ item }: { item: { icon: any, title: string, desc: string } }) {
     </div>
   );
 }
-
