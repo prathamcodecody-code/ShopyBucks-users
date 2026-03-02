@@ -37,9 +37,35 @@ export default function AuthModal({ show, onClose }: { show: boolean; onClose: (
         await api.post("/auth/login/otp/send", { phone: identifier });
         setStep("otp");
       }
-    } catch (err) {
-      alert("Something went wrong. Please check your entry.");
-    } finally {
+    }   catch (err: any) {
+  const status = err?.response?.status;
+  const code = err?.response?.data?.code;
+
+  // 🚀 NEW USER → REGISTER
+  if (status === 404 && code === "USER_NOT_FOUND") {
+    onClose();
+    openRegister();
+    return;
+  }
+
+  if (code === "INVALID_PASSWORD") {
+    alert("Incorrect password");
+    return;
+  }
+
+  if (code === "INVALID_OTP") {
+    alert("Invalid OTP");
+    return;
+  }
+
+  if (code === "USER_NOT_VERIFIED") {
+    alert("Please verify your phone first");
+    return;
+  }
+
+  alert("Login failed");
+}
+ finally {
       setLoading(false);
     }
   };
@@ -55,12 +81,43 @@ export default function AuthModal({ show, onClose }: { show: boolean; onClose: (
       }
       loginWithToken(res.data.token);
       onClose();
-    } catch (err) {
-      alert("Login failed. Please check your credentials.");
-    } finally {
+    } catch (err: any) {
+  const status = err?.response?.status;
+  const code = err?.response?.data?.code;
+
+  // 🚀 USER DOES NOT EXIST → REGISTER
+  if (status === 404 && code === "USER_NOT_FOUND") {
+    onClose();
+    openRegister();
+    return;
+  }
+
+  if (code === "INVALID_PASSWORD") {
+    alert("Incorrect password");
+    return;
+  }
+
+  if (code === "INVALID_OTP") {
+    alert("Invalid OTP");
+    return;
+  }
+
+  if (code === "OTP_EXPIRED") {
+    alert("OTP expired. Please retry.");
+    return;
+  }
+
+  if (code === "USER_NOT_VERIFIED") {
+    alert("Please verify your phone first");
+    return;
+  }
+
+  alert("Login failed");
+} finally {
       setLoading(false);
     }
   };
+
 
   if (!show) return null;
 
