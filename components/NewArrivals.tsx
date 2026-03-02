@@ -6,11 +6,12 @@ import { api } from "@/lib/api";
 import { Sparkles, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-/* ---------------- SKELETON CARD (Updated to 3/4 Ratio) ---------------- */
+/* ---------------- SKELETON CARD (Updated to Square Ratio) ---------------- */
 function ProductSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="aspect-[3/4] bg-genz-border/40 rounded-genz animate-pulse" />
+      {/* Updated to aspect-square to match the smaller card style */}
+      <div className="aspect-square bg-genz-border/40 rounded-lg animate-pulse" />
       <div className="h-3 bg-genz-border/40 rounded-full w-3/4 animate-pulse" />
       <div className="h-3 bg-genz-border/40 rounded-full w-1/2 animate-pulse" />
     </div>
@@ -26,8 +27,8 @@ export default function NewArrivals() {
       try {
         const res = await api.get("/products", {
           params: {
-            sort: "random", // Randomized for fresh content on every refresh
-            limit: 12,      // Increased to 12 products
+            sort: "random", 
+            limit: 15, // Updated to 15 (multiple of 5)
           },
         });
         const data = res.data;
@@ -44,10 +45,11 @@ export default function NewArrivals() {
   }, []);
 
   return (
-    <section className="bg-genz-bg pt-1 pb-1 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
+    <section className="bg-genz-bg pt-9 pb-1 px-4 sm:px-6">
+      {/* Increased max-width to allow 5 columns to breathe */}
+      <div className="max-w-[1600px] mx-auto">
         
-        {/* HEADER SECTION: Compact & Precise */}
+        {/* HEADER SECTION */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-genz-accent font-black text-[10px] uppercase tracking-[0.4em]">
@@ -71,11 +73,11 @@ export default function NewArrivals() {
           </Link>
         </div>
 
-        {/* GRID CONTAINER: Consistent 2-column mobile, 4-column PC */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* GRID CONTAINER: 2-col mobile, 3-col tablet, 5-col desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-5">
           {loading ? (
-            // Showing 8 skeletons as a preview for the 12-item grid
-            Array.from({ length: 8 }).map((_, i) => (
+            // Showing 10 skeletons to match the 5-column flow
+            Array.from({ length: 10 }).map((_, i) => (
               <ProductSkeleton key={i} />
             ))
           ) : products.length === 0 ? (
@@ -86,8 +88,7 @@ export default function NewArrivals() {
             </div>
           ) : (
             products.map((p) => (
-              <div key={p.id} className="relative transition-transform duration-500 hover:-translate-y-1">
-                
+              <div key={p.id} className="relative h-full transition-transform duration-500 hover:-translate-y-1">
                 <ProductCard product={p} />
               </div>
             ))
@@ -97,5 +98,3 @@ export default function NewArrivals() {
     </section>
   );
 }
-
-
