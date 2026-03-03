@@ -68,14 +68,6 @@ export default function SearchClient() {
         const res = await api.get("/products", { params });
         const data = res.data;
 
-        console.log("=== API RESPONSE ===");
-        console.log("Total products:", data.products?.length);
-        console.log("First 3 products:", data.products?.slice(0, 3).map((p: any) => ({
-          id: p.id,
-          title: p.title.substring(0, 30),
-          __sponsored: p.__sponsored
-        })));
-
         const list = Array.isArray(data)
           ? data
           : Array.isArray(data.products)
@@ -121,7 +113,7 @@ export default function SearchClient() {
   if (!query) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <h2 className="text-2xl font-semibold text-gray-700">
+        <h2 className="text-xl font-black text-genz-ink uppercase tracking-tighter italic">
           Start typing to search products
         </h2>
       </div>
@@ -129,15 +121,17 @@ export default function SearchClient() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6 md:py-10">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Results for "{query}"</h1>
+          <h1 className="text-xl md:text-3xl font-black text-genz-ink uppercase italic tracking-tighter">
+            Results for "{query}"
+          </h1>
           {!loading && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-[10px] md:text-xs font-bold text-genz-muted uppercase tracking-widest mt-1">
               {total} Products Found
               {page === 1 && total > 0 && (
-                <span className="ml-2 text-xs text-purple-600 font-medium">
+                <span className="ml-2 text-genz-accent italic">
                   • Including Sponsored
                 </span>
               )}
@@ -146,7 +140,7 @@ export default function SearchClient() {
         </div>
 
         <select
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-purple-600"
+          className="border border-genz-border rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-white outline-none focus:ring-2 focus:ring-genz-accent"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         >
@@ -157,31 +151,35 @@ export default function SearchClient() {
         </select>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        <aside className="col-span-12 md:col-span-3">
-          <FiltersSidebar
-            onFilter={handleFilter}
-            initialFilters={{ attributes: {}, colors: [], sizes: [] }}
-          />
+      <div className="grid grid-cols-12 gap-4 md:gap-8">
+        {/* SIDEBAR: Narrower for more product space */}
+        <aside className="col-span-12 lg:col-span-3 xl:col-span-2 self-start">
+          <div className="bg-white border border-genz-border rounded-2xl p-4 shadow-sm">
+            <FiltersSidebar
+              onFilter={handleFilter}
+              initialFilters={{ attributes: {}, colors: [], sizes: [] }}
+            />
+          </div>
         </aside>
 
-        <main className="col-span-12 md:col-span-9">
+        {/* MAIN: 4 products per row (next to sidebar) */}
+        <main className="col-span-12 lg:col-span-9 xl:col-span-10">
           {loading && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-72 bg-gray-100 animate-pulse rounded-xl" />
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="aspect-square bg-gray-100 animate-pulse rounded-xl" />
               ))}
             </div>
           )}
 
-          {error && <p className="text-red-500">{error}</p>}
+          {error && <p className="text-red-500 font-bold uppercase text-xs">{error}</p>}
 
           {!loading && !error && products.length === 0 && (
-            <div className="text-center py-20">
-              <p className="text-lg font-semibold text-gray-700">
+            <div className="text-center py-20 border border-dashed border-genz-border rounded-2xl bg-white">
+              <p className="text-sm font-black text-genz-ink uppercase tracking-widest">
                 No products found for "{query}"
               </p>
-              <p className="text-gray-500 mt-2">
+              <p className="text-[10px] text-genz-muted mt-2 uppercase">
                 Try different keywords or adjust filters
               </p>
             </div>
@@ -189,81 +187,55 @@ export default function SearchClient() {
 
           {!loading && !error && products.length > 0 && (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
                 {products.map((p) => (
-                  <div key={p.id} className="relative">
-                    <ProductCard product={p} />
-                    
-                  </div>
+                  <ProductCard key={p.id} product={p} />
                 ))}
               </div>
 
-              {/* PAGINATION */}
+              {/* PAGINATION: Gen Z Styled */}
               {totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
+                <div className="mt-12 flex flex-col items-center gap-4">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(page - 1)}
+                      disabled={page === 1}
+                      className="px-4 py-2 border-2 border-genz-border rounded-full text-[10px] font-black uppercase tracking-widest hover:border-genz-accent disabled:opacity-30 transition-all"
+                    >
+                      Prev
+                    </button>
 
-                  <div className="flex gap-1">
-                    {page > 3 && (
-                      <>
-                        <button
-                          onClick={() => handlePageChange(1)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-                        >
-                          1
-                        </button>
-                        {page > 4 && <span className="px-3 py-2 text-gray-500">...</span>}
-                      </>
-                    )}
+                    <div className="flex gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((p) => p >= page - 1 && p <= page + 1)
+                        .map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => handlePageChange(p)}
+                            className={`w-8 h-8 rounded-full text-[10px] font-black border-2 transition-all ${
+                              p === page
+                                ? "bg-genz-ink text-white border-genz-ink"
+                                : "border-genz-border text-genz-muted hover:border-genz-accent"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                    </div>
 
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter((p) => p >= page - 2 && p <= page + 2)
-                      .map((p) => (
-                        <button
-                          key={p}
-                          onClick={() => handlePageChange(p)}
-                          className={`px-3 py-2 border rounded-lg text-sm font-medium ${
-                            p === page
-                              ? "bg-purple-600 text-white border-purple-600"
-                              : "border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      ))}
-
-                    {page < totalPages - 2 && (
-                      <>
-                        {page < totalPages - 3 && <span className="px-3 py-2 text-gray-500">...</span>}
-                        <button
-                          onClick={() => handlePageChange(totalPages)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-                        >
-                          {totalPages}
-                        </button>
-                      </>
-                    )}
+                    <button
+                      onClick={() => handlePageChange(page + 1)}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 border-2 border-genz-border rounded-full text-[10px] font-black uppercase tracking-widest hover:border-genz-accent disabled:opacity-30 transition-all"
+                    >
+                      Next
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page === totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
+                  <div className="text-[10px] font-bold text-genz-muted uppercase tracking-widest">
+                    Page {page} / {totalPages}
+                  </div>
                 </div>
               )}
-
-              <div className="mt-4 text-center text-sm text-gray-500">
-                Page {page} of {totalPages} • Showing {products.length} products
-              </div>
             </>
           )}
         </main>
