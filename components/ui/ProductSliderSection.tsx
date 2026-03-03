@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useRef } from "react";
 import ProductCard from "@/components/ProductCard";
+import Link from "next/link";
 import { Product } from "@/lib/product";
 
 type ProductListSection = {
   id: number;
   title?: string;
   products: Product[];
+  slug?: string; // Added slug for the Link
 };
 
 export default function ProductSliderSection({
@@ -20,19 +22,8 @@ export default function ProductSliderSection({
 
   if (!section.products?.length) return null;
 
-  const scroll = (dir: "left" | "right") => {
-    if (!sliderRef.current) return;
-    
-    // Adjusted scroll amount to match approximately one full "view" of 5 items
-    const scrollAmount = sliderRef.current.clientWidth * 0.9; 
-    const amount = dir === "left" ? -scrollAmount : scrollAmount;
-    
-    sliderRef.current.scrollBy({ left: amount, behavior: "smooth" });
-  };
-
   return (
     <section className="bg-genz-bg pt-1 pb-1 px-4 sm:px-6">
-      {/* Increased max-width for 5-column consistency */}
       <div className="max-w-[1600px] mx-auto">
         
         {/* HEADER */}
@@ -48,23 +39,16 @@ export default function ProductSliderSection({
             </div>
           )}
 
-          {/* NAVIGATION */}
-          <div className="flex gap-2 mb-1">
-            <button
-              onClick={() => scroll("left")}
-              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 border-genz-border bg-white text-genz-ink shadow-sm hover:border-genz-accent hover:text-genz-accent transition-all active:scale-90"
-              aria-label="Scroll Left"
-            >
-              <ChevronLeft size={20} strokeWidth={3} />
-            </button>
-            <button
-              onClick={() => scroll("right")}
-              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full border-2 border-genz-border bg-white text-genz-ink shadow-sm hover:border-genz-accent hover:text-genz-accent transition-all active:scale-90"
-              aria-label="Scroll Right"
-            >
-              <ChevronRight size={20} strokeWidth={3} />
-            </button>
-          </div>
+          {/* NEW TOP NAVIGATION: VIEW ALL */}
+          <Link 
+            href={`/all-products?categoryId=${section.id}`} // Replace with your actual routing logic
+            className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-genz-muted hover:text-genz-accent transition-all pb-1"
+          >
+            View All
+            <div className="bg-white p-1.5 rounded-full border border-genz-border group-hover:bg-genz-accent group-hover:border-genz-accent group-hover:text-white transition-all shadow-sm">
+              <ChevronRight size={14} strokeWidth={3} />
+            </div>
+          </Link>
         </div>
 
         {/* SLIDER CONTAINER */}
@@ -75,26 +59,11 @@ export default function ProductSliderSection({
           {section.products.map((product) => (
             <div 
               key={product.id} 
-              /* Updated widths:
-                 Mobile: w-[180px] (~2 items visible)
-                 Tablet: md:w-[250px] (~3-4 items visible)
-                 Large Desktop: xl:w-[calc(20%-16px)] (Exactly 5 items visible)
-              */
               className="w-[180px] md:w-[250px] xl:w-[calc(20%-16px)] flex-shrink-0 snap-start transition-transform duration-500 hover:-translate-y-1"
             >
               <ProductCard product={product} />
             </div>
           ))}
-          
-          {/* SNEAK PEEK CARD (Matches widths above) */}
-          <div className="w-[180px] md:w-[250px] xl:w-[calc(20%-16px)] flex-shrink-0 snap-start flex items-center justify-center">
-             <button className="flex flex-col items-center gap-4 group h-full justify-center border border-dashed border-genz-border rounded-lg w-full py-20 bg-white/50">
-                <div className="w-12 h-12 rounded-full border-2 border-dashed border-genz-border flex items-center justify-center group-hover:border-genz-accent group-hover:bg-genz-softAccent transition-all duration-300">
-                   <ChevronRight size={20} className="text-genz-muted group-hover:text-genz-accent" />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-genz-muted group-hover:text-genz-ink">View All</span>
-             </button>
-          </div>
         </div>
       </div>
 
