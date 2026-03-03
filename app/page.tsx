@@ -208,55 +208,57 @@ export default function HomePage() {
         <div className="flex flex-col lg:flex-row gap-12">
 
           {/* Filter sidebar */}
-          <aside className="w-full lg:w-1/4 self-start">
-            <div className="bg-white border border-genz-border rounded-3xl p-6 shadow-sm">
-              <HomeFilter
-                categories={categories}
-                initialFilters={{ 
-                  categoryId: DEFAULT_CATEGORY_ID, 
-                  attributes: {},
-                  colors: [],
-                  sizes: []
-                }}
-                onFilter={applyFilters}
-              />
-            </div>
-          </aside>
-
+          <aside className="w-full lg:w-1/5 self-start mb-8 lg:mb-0">
+  <div className="bg-white border border-genz-border rounded-2xl p-4 shadow-sm">
+    <HomeFilter
+      categories={categories}
+      initialFilters={{ 
+        categoryId: DEFAULT_CATEGORY_ID, 
+        attributes: {},
+        colors: [],
+        sizes: []
+      }}
+      onFilter={applyFilters}
+    />
+  </div>
+</aside>
           {/* Product grid */}
-          <main className="w-full lg:w-3/4">
-            {loading ? (
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="aspect-[3/4] rounded-genz bg-gray-100 animate-pulse"
-                  />
-                ))}
-              </div>
-            ) : products.length > 0 ? (
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                {products.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-24 bg-white border border-dashed border-genz-border rounded-genz">
-                <p className="text-genz-muted font-bold uppercase tracking-widest text-sm mb-2">
-                  No drops match your vibe.
-                </p>
-                <p className="text-genz-muted text-xs mb-4">
-                  Try adjusting your filters or explore other categories
-                </p>
-                <button
-                  onClick={resetFilters}
-                  className="mt-4 px-6 py-3 bg-genz-accent text-white font-bold rounded-full text-xs uppercase tracking-widest hover:bg-opacity-90 transition-all"
-                >
-                  Reset filters
-                </button>
-              </div>
-            )}
-          </main>
+         <main className="w-full lg:w-4/5">
+  {loading ? (
+    /* Loading Skeletons: Updated to grid-cols-4 */
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="aspect-square rounded-lg bg-gray-100 animate-pulse"
+        />
+      ))}
+    </div>
+  ) : products.length > 0 ? (
+    /* Product grid: Responsive 2-col (mobile) to 4-col (desktop) */
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
+    </div>
+  ) : (
+    /* Empty State */
+    <div className="text-center py-24 bg-white border border-dashed border-genz-border rounded-2xl">
+      <p className="text-genz-muted font-bold uppercase tracking-widest text-xs mb-2">
+        No drops match your vibe.
+      </p>
+      <p className="text-genz-muted text-[10px] mb-4">
+        Try adjusting your filters or explore other categories
+      </p>
+      <button
+        onClick={resetFilters}
+        className="mt-2 px-6 py-2 bg-genz-accent text-white font-bold rounded-full text-[10px] uppercase tracking-widest hover:bg-opacity-90 transition-all"
+      >
+        Reset filters
+      </button>
+    </div>
+  )}
+</main>
         </div>
       </section>
 
