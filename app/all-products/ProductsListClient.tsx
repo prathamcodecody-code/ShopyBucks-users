@@ -15,12 +15,10 @@ export default function ProductsListClient() {
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState(searchParams.get("sort") || "relevance");
 
-  // ✅ FIX: Read all filter params from URL
   const categoryId = searchParams.get("categoryId") || "";
   const typeId = searchParams.get("typeId") || "";
   const subtypeId = searchParams.get("subtypeId") || "";
 
-  // Keep latest sort in a ref so loadProducts doesn't need it as a dep
   const sortRef = useRef(sort);
   useEffect(() => {
     sortRef.current = sort;
@@ -29,7 +27,6 @@ export default function ProductsListClient() {
   const loadProducts = useCallback(async (filters: FilterState) => {
     try {
       setLoading(true);
-
       const params: Record<string, any> = { limit: 100 };
 
       if (filters.categoryId) params.categoryId = filters.categoryId;
@@ -40,7 +37,6 @@ export default function ProductsListClient() {
       if (filters.stock)      params.stock      = filters.stock;
       if (sortRef.current !== "relevance") params.sort = sortRef.current;
 
-      // Colors & sizes — always send even if empty so backend can clear them
       if (filters.colors && filters.colors.length > 0) {
         params.colors = filters.colors.join(",");
       }
@@ -48,7 +44,6 @@ export default function ProductsListClient() {
         params.sizes = filters.sizes.join(",");
       }
 
-      // Dynamic attributes
       for (const [slug, values] of Object.entries(filters.attributes || {})) {
         if (values.length) params[slug] = values.join(",");
       }
@@ -75,7 +70,6 @@ export default function ProductsListClient() {
     }
   }, []);
 
-  // ✅ FIX: Include typeId and subtypeId from URL in initial filters
   const filtersRef = useRef<FilterState>({
     categoryId: categoryId ? Number(categoryId) : undefined,
     typeId: typeId ? Number(typeId) : undefined,
@@ -86,11 +80,9 @@ export default function ProductsListClient() {
   });
 
   useEffect(() => {
-    // When sort changes, reload with existing filters
     loadProducts(filtersRef.current);
   }, [sort, loadProducts]);
 
-  // ✅ FIX: Re-fetch when URL params change (categoryId, typeId, subtypeId)
   useEffect(() => {
     const initialFilters: FilterState = {
       categoryId: categoryId ? Number(categoryId) : undefined,
@@ -104,7 +96,6 @@ export default function ProductsListClient() {
     loadProducts(initialFilters);
   }, [categoryId, typeId, subtypeId, loadProducts]);
 
-  // Handle filter changes from sidebar
   const handleFilter = useCallback((filters: FilterState) => {
     filtersRef.current = filters;
     loadProducts(filters);
@@ -115,17 +106,24 @@ export default function ProductsListClient() {
     : "All Products";
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+    /* Increased max-width to 1600px to match other sections */
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6 md:py-10">
+      
+      {/* HEADER SECTION: Cleaned up spacing */}
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{categoryName}</h1>
+          <h1 className="text-xl md:text-3xl font-black text-genz-ink uppercase italic tracking-tighter">
+            {categoryName}
+          </h1>
           {!loading && (
-            <p className="text-sm text-gray-500 mt-1">{total} Products Found</p>
+            <p className="text-[10px] md:text-xs font-bold text-genz-muted uppercase tracking-widest mt-1">
+              {total} Products Found
+            </p>
           )}
         </div>
 
         <select
-          className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white outline-none focus:ring-2 focus:ring-purple-600"
+          className="border border-genz-border rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest bg-white outline-none focus:ring-2 focus:ring-genz-accent"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         >
@@ -136,42 +134,37 @@ export default function ProductsListClient() {
         </select>
       </div>
 
-      <div className="grid grid-cols-12 gap-8">
-        <aside className="col-span-12 md:col-span-3">
-          <FiltersSidebar
-            categoryId={categoryId}
-            onFilter={handleFilter}
-            initialFilters={{
-              categoryId: categoryId ? Number(categoryId) : undefined,
-              typeId: typeId ? Number(typeId) : undefined,
-              subtypeId: subtypeId ? Number(subtypeId) : undefined,
-              attributes: {},
-              colors: [],
-              sizes: [],
-            }}
-          />
+      <div className="grid grid-cols-12 gap-4 md:gap-8">
+        {/* SIDEBAR: Narrower to allow more product room (col-span-12 on mobile, 3 on tablet, 2 on wide) */}
+        <aside className="col-span-12 lg:col-span-3 xl:col-span-2 self-start">
+          <div className="bg-white border border-genz-border rounded-2xl p-4 shadow-sm">
+            <FiltersSidebar
+              categoryId={categoryId}
+              onFilter={handleFilter}
+              initialFilters={filtersRef.current}
+            />
+          </div>
         </aside>
 
-        <main className="col-span-12 md:col-span-9">
-          {loading && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-72 bg-gray-100 animate-pulse rounded-xl" />
+        {/* MAIN GRID: col-span-12 on mobile, 9 on tablet, 10 on wide */}
+        <main className="col-span-12 lg:col-span-9 xl:col-span-10">
+          {loading ? (
+            /* LOADING SKELETON: Matches square compact style */
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="aspect-square bg-gray-100 animate-pulse rounded-xl" />
               ))}
             </div>
-          )}
-
-          {!loading && products.length === 0 && (
-            <div className="text-center py-20">
-              <p className="text-lg font-semibold text-gray-700">No products found</p>
-              <p className="text-gray-500 mt-2">
+          ) : products.length === 0 ? (
+            <div className="text-center py-20 border border-dashed border-genz-border rounded-2xl bg-white">
+              <p className="text-sm font-black text-genz-ink uppercase tracking-widest">No products found</p>
+              <p className="text-[10px] text-genz-muted mt-2 uppercase">
                 Try adjusting filters or explore other categories
               </p>
             </div>
-          )}
-
-          {!loading && products.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          ) : (
+            /* PRODUCT GRID: 2 columns mobile, 3 tablet, 4 wide desktop */
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
               {products.map((p) => (
                 <ProductCard key={p.id} product={p as any} />
               ))}
