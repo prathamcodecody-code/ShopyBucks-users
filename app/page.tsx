@@ -11,10 +11,12 @@ import TopCategories from "@/components/TopCategories";
 import { api } from "@/lib/api";
 import { Product } from "@/lib/product";
 import BannerSection from "@/components/ui/BannerSection";
+import { History, Tag, Sparkles } from "lucide-react";
 import CollectionGridSection from "@/components/ui/CollectionGridSection";
 import ProductSliderSection from "@/components/ui/ProductSliderSection";
 import TextBlockSection from "@/components/ui/TextBlockSection";
 import SponsoredProducts from "@/components/Home/SponsoredProducts";
+import RecommendationSection from "@/components/recommendations/RecommendationSection";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -68,6 +70,10 @@ function buildParams(filter: FullHomeFilterState): Record<string, any> {
 // ─────────────────────────────────────────────
 
 export default function HomePage() {
+  const [recommendations, setRecommendations] = useState({
+  cartProducts: [],
+  categoryProducts: []
+});
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading,  setLoading]  = useState(true);
@@ -160,6 +166,28 @@ export default function HomePage() {
   const banner3          = banners[2];
   const remainingBanners = banners.slice(3);
 
+  //--------------------------------------------
+  //Recommendations (Homepage)
+  //--------------------------------------------
+ useEffect(() => {
+  async function fetchRecommendations() {
+    try {
+      const res = await api.get("api/home/recommendations");
+
+      const data = res.data;
+
+      setRecommendations({
+        cartProducts: data.cartProducts || [],
+        categoryProducts: data.categoryProducts || []
+      });
+
+    } catch (error) {
+      console.error("Recommendation error:", error);
+    }
+  }
+
+  fetchRecommendations();
+}, []);
   // ─────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────
@@ -175,14 +203,29 @@ export default function HomePage() {
       {/* BANNER 1 */}
       {banner1 && <BannerSection banners={[banner1]} />}
 
+
       {/* 3. TRENDING NOW */}
       <TrendingNow />
-      
+
+  <div className="space-y-2">
+  <RecommendationSection
+    title="Pick up where you left off"
+    icon={<History size={24} strokeWidth={2.5} />}
+    products={recommendations.cartProducts}
+  />
+
+  <RecommendationSection
+    title="Continue shopping deals"
+    icon={<Tag size={24} strokeWidth={2.5} />}
+    products={recommendations.categoryProducts}
+  />
+  
+</div>
+
      {/*Sponsored Products Section*/}
      <section className="mb-8 pt-10">
       <SponsoredProducts />
       </section>
-      
       {/* BANNER 2 */}
       {banner2 && <BannerSection banners={[banner2]} />}
 
@@ -207,8 +250,8 @@ export default function HomePage() {
 
         <div className="flex flex-col lg:flex-row gap-12">
 
-          {/* Filter sidebar */}
-          <aside className="w-full lg:w-1/5 self-start mb-8 lg:mb-0">
+          {/* Filter sidebar */}   
+<aside className="w-full lg:w-1/5 self-start mb-8 lg:mb-0">
   <div className="bg-white border border-genz-border rounded-2xl p-4 shadow-sm">
     <HomeFilter
       categories={categories}
@@ -222,8 +265,8 @@ export default function HomePage() {
     />
   </div>
 </aside>
-          {/* Product grid */}
-         <main className="w-full lg:w-4/5">
+
+<main className="w-full lg:w-4/5">
   {loading ? (
     /* Loading Skeletons: Updated to grid-cols-4 */
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
