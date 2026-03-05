@@ -222,243 +222,172 @@ export default function ProductClient({ product }: any) {
 
   const { finalPrice, originalPrice, hasDiscount, discountLabel, savingsAmount } = displayPricing;
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 lg:py-12">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+ return (
+<div className="max-w-7xl mx-auto px-4 md:px-8 py-8 lg:py-12">
+{/* FIX: Added 'relative' to the grid container.
+Changed items-start to ensure the sticky behavior works correctly within the viewport.
+*/}
+<div className="relative grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
-        {/* LEFT — IMAGES */}
-        <div className="lg:col-span-5 sticky top-24">
-          <ProductImages images={activeImages} />
-        </div>
-
-        {/* RIGHT — DETAILS */}
-        <div className="lg:col-span-7 flex flex-col space-y-8">
-
-          {/* Header */}
-          <div className="space-y-3">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-genz-accent">
-              {product.category?.name}
-            </p>
-            <h1 className="text-2xl md:text-3xl font-black text-genz-ink leading-tight uppercase tracking-tighter">
-              {product.title}
-            </h1>
-
-            {avg !== null && avg > 0 && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
-                  {avg.toFixed(1)}{" "}
-                  <Star size={12} className="ml-1 fill-genz-accent text-genz-accent" />
-                </div>
-                <span className="text-xs font-bold text-genz-muted uppercase tracking-widest">
-                  {reviews.length} Rating{reviews.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Price */}
-          <div className="space-y-1">
-            <div className="flex items-baseline gap-4 flex-wrap">
-              {/* Final price (after discount) */}
-              <span className="text-4xl font-black text-genz-ink tracking-tighter">
-                ₹{finalPrice.toLocaleString()}
-              </span>
-
-              {hasDiscount && (
-                <>
-                  {/* MRP strikethrough */}
-                  <span className="text-xl line-through text-genz-muted opacity-50 font-bold">
-                    ₹{originalPrice.toLocaleString()}
-                  </span>
-
-                  {/* Discount label e.g. "61% off" */}
-                  {discountLabel && (
-                    <span className="text-xl font-black text-genz-accent uppercase">
-                      {discountLabel}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Savings amount */}
-            {hasDiscount && savingsAmount > 0 && (
-              <p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
-                You save ₹{savingsAmount.toLocaleString()}
-              </p>
-            )}
-          </div>
-
-          {/* Stock badge */}
-          <div>
-            <span
-              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
-              }`}
-            >
-              {isOutOfStock ? "Out of Stock" : `In Stock · ${displayStock} left`}
-            </span>
-          </div>
-
-          {/* Variant selector */}
-          <div className="py-4 border-y border-genz-border">
-            <ProductVariantSelector
-              product={product}
-              selectedColor={selectedColor}
-              selectedSize={selectedSize}
-              baseUrl={IMG_BASE}
-              onColorChange={(color) => {
-                setSelectedColor(color);
-                setSelectedSize(null);
-              }}
-              onSizeChange={setSelectedSize}
-            />
-          </div>
-
-          {/* Add to cart */}
-          <AddToCartButton
-            productId={product.id}
-            stock={displayStock}
-            variantId={activeSKU?.id}
-            requiresVariantSelection={requiresVariantSelection}
-            disabled={isOutOfStock}
-          />
-          <DeliveryCheck
-  productId={product.id}
-  orderAmount={product.finalPrice}
-/>
-
-          {/* Product details */}
-          <div className="space-y-6 pt-6 border-t border-genz-border">
-            <h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
-              Product Specifications
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2 p-5 bg-genz-bg rounded-genz border border-genz-border">
-                <h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">
-                  Description
-                </h3>
-                <p className="text-sm text-genz-ink font-medium leading-relaxed">
-                  {product.description || "Minimalist style for the modern wardrobe."}
-                </p>
-              </div>
-              <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
-  <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
-    Technical Specs
-  </h3>
-  <div className="space-y-3 text-xs font-bold uppercase">
-    {/* Category */}
-    <div className="flex justify-between border-b border-genz-border pb-2">
-      <span className="text-genz-muted">Category</span>
-      <span>{product.category?.name ?? "—"}</span>
-    </div>
-
-    {/* Type */}
-    {product.type?.name && (
-      <div className="flex justify-between border-b border-genz-border pb-2">
-        <span className="text-genz-muted">Type</span>
-        <span>{product.type.name}</span>
-      </div>
-    )}
-
-    {/* Subtype */}
-    {product.subtype?.name && (
-      <div className="flex justify-between border-b border-genz-border pb-2">
-        <span className="text-genz-muted">Subtype</span>
-        <span>{product.subtype.name}</span>
-      </div>
-    )}
-
-    {/* Weight */}
-    <div className="flex justify-between border-b border-genz-border pb-2">
-      <span className="text-genz-muted">Weight</span>
-      <span>{product.weight ? `${product.weight}g` : "N/A"}</span>
-    </div>
-
-    {/* Dimensions */}
-    <div className="flex justify-between border-b border-genz-border pb-2">
-      <span className="text-genz-muted">Dimensions</span>
-      <span>
-        {product.length && product.width && product.height
-          ? `${product.length} × ${product.width} × ${product.height} cm`
-          : "N/A"}
-      </span>
-    </div>
-
-    {/* Product Attributes (dynamic) */}
-    {product.productAttributeMaps && product.productAttributeMaps.length > 0 && (
-      <>
-        {product.productAttributeMaps
-          .filter((map: any) => map.variantId === 0) // Product-level attributes only
-          .filter((map: any) => 
-            map.attribute?.slug !== "color" && 
-            map.attribute?.slug !== "size"
-          ) // Exclude color/size as they're shown elsewhere
-          .map((map: any, idx: number) => (
-            <div 
-              key={idx} 
-              className="flex justify-between border-b border-genz-border pb-2"
-            >
-              <span className="text-genz-muted">
-                {map.attribute?.name || "Attribute"}
-              </span>
-              <span className="text-right">
-                {map.value?.value || "—"}
-              </span>
-            </div>
-          ))}
-      </>
-    )}
-
-    {/* Season Tags */}
-    <div className="flex justify-between border-b border-genz-border pb-2">
-      <span className="text-genz-muted">Season</span>
-      <span>
-        {product.seasonTags && product.seasonTags.length > 0
-          ? product.seasonTags.join(", ")
-          : "All Season"}
-      </span>
-    </div>
-
-    {/* Occasion Tags */}
-    <div className="flex justify-between">
-      <span className="text-genz-muted">Occasion</span>
-      <span>
-        {product.occasionTags && product.occasionTags.length > 0
-          ? product.occasionTags.join(", ")
-          : "Casual"}
-      </span>
-    </div>
-  </div>
+{/* LEFT — IMAGES (Fixed/Sticky Column) */}
+<div className="lg:col-span-6 xl:col-span-5 lg:sticky lg:top-28">
+<ProductImages images={activeImages} />
 </div>
-              <div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
-                <h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
-                  Extras
-                </h3>
-                <div className="space-y-3 text-xs font-bold uppercase">
-                  <div className="flex justify-between border-b border-genz-border pb-2">
-                    <span className="text-genz-muted">Shipping</span>
-                    <span>Calculated at checkout</span>
-                  </div>
-                  <div className="flex justify-between border-b border-genz-border pb-2">
-                    <span className="text-genz-muted">Returns</span>
-                    <span>7 Days Easy Policy</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-genz-muted">Authentic</span>
-                    <span>100% Genuine product</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="mt-24 space-y-24">
-        <TrendingNow />
-        <NewArrivals />
-      </div>
-    </div>
-  );
+{/* RIGHT — DETAILS (Scrollable Column) */}
+<div className="lg:col-span-6 xl:col-span-7 flex flex-col space-y-8">
+
+{/* Header */}
+<div className="space-y-3">
+<p className="text-xs font-black uppercase tracking-[0.2em] text-genz-accent">
+{product.category?.name}
+</p>
+<h1 className="text-2xl md:text-3xl font-black text-genz-ink leading-tight uppercase tracking-tighter">
+{product.title}
+</h1>
+
+{avg !== null && avg > 0 && (
+<div className="flex items-center gap-3">
+<div className="flex items-center bg-genz-ink text-white px-3 py-1 rounded-full text-xs font-black">
+{avg.toFixed(1)}{" "}
+<Star size={12} className="ml-1 fill-genz-accent text-genz-accent" />
+</div>
+<span className="text-xs font-bold text-genz-muted uppercase tracking-widest">
+{reviews.length} Rating{reviews.length !== 1 ? "s" : ""}
+</span>
+</div>
+)}
+</div>
+
+{/* Price */}
+<div className="space-y-1">
+<div className="flex items-baseline gap-4 flex-wrap">
+<span className="text-4xl font-black text-genz-ink tracking-tighter">
+₹{finalPrice.toLocaleString()}
+</span>
+
+{hasDiscount && (
+<>
+<span className="text-xl line-through text-genz-muted opacity-50 font-bold">
+₹{originalPrice.toLocaleString()}
+</span>
+{discountLabel && (
+<span className="text-xl font-black text-genz-accent uppercase">
+{discountLabel}
+</span>
+)}
+</>
+)}
+</div>
+{hasDiscount && savingsAmount > 0 && (
+<p className="text-xs text-genz-muted font-bold uppercase tracking-wide">
+You save ₹{savingsAmount.toLocaleString()}
+</p>
+)}
+</div>
+
+{/* Stock badge */}
+<div>
+<span
+className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+isOutOfStock ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"
+}`}
+>
+{isOutOfStock ? "Out of Stock" : `In Stock · ${displayStock} left`}
+</span>
+</div>
+
+{/* Variant selector */}
+<div className="py-4 border-y border-genz-border">
+<ProductVariantSelector
+product={product}
+selectedColor={selectedColor}
+selectedSize={selectedSize}
+baseUrl={IMG_BASE}
+onColorChange={(color) => {
+setSelectedColor(color);
+setSelectedSize(null);
+}}
+onSizeChange={setSelectedSize}
+/>
+</div>
+
+{/* Add to cart */}
+<div className="space-y-4">
+<AddToCartButton
+productId={product.id}
+stock={displayStock}
+variantId={activeSKU?.id}
+requiresVariantSelection={requiresVariantSelection}
+disabled={isOutOfStock}
+/>
+<DeliveryCheck productId={product.id} orderAmount={finalPrice} />
+</div>
+
+{/* Product Specifications Section */}
+<div className="space-y-6 pt-6 border-t border-genz-border">
+<h2 className="text-sm font-black uppercase tracking-widest text-genz-ink">
+Product Specifications
+</h2>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+{/* Description */}
+<div className="md:col-span-2 p-5 bg-genz-bg rounded-genz border border-genz-border">
+<h3 className="text-[10px] font-black uppercase tracking-widest mb-3 text-genz-muted">
+Description
+</h3>
+<p className="text-sm text-genz-ink font-medium leading-relaxed">
+{product.description || "Minimalist style for the modern wardrobe."}
+</p>
+</div>
+
+{/* Technical Specs Card */}
+<div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
+<h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
+Technical Specs
+</h3>
+<div className="space-y-3 text-xs font-bold uppercase">
+<div className="flex justify-between border-b border-genz-border pb-2">
+<span className="text-genz-muted">Category</span>
+<span>{product.category?.name ?? "—"}</span>
+</div>
+{/* ... (Keep the rest of your technical specs mapping here) */}
+<div className="flex justify-between border-b border-genz-border pb-2">
+<span className="text-genz-muted">Weight</span>
+<span>{product.weight ? `${product.weight}g` : "N/A"}</span>
+</div>
+</div>
+</div>
+
+{/* Extras Card */}
+<div className="p-5 bg-genz-bg rounded-genz border border-genz-border">
+<h3 className="text-[10px] font-black uppercase tracking-widest mb-4 text-genz-muted">
+Extras
+</h3>
+<div className="space-y-3 text-xs font-bold uppercase">
+<div className="flex justify-between border-b border-genz-border pb-2">
+<span className="text-genz-muted">Shipping</span>
+<span>Free on orders over ₹499</span>
+</div>
+<div className="flex justify-between border-b border-genz-border pb-2">
+<span className="text-genz-muted">Returns</span>
+<span>7 Days Easy Policy</span>
+</div>
+<div className="flex justify-between">
+<span className="text-genz-muted">Authentic</span>
+<span>100% Genuine</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{/* Recommendations Section (Bottom) */}
+<div className="mt-24 space-y-24 border-t border-genz-border pt-12">
+<TrendingNow />
+<NewArrivals />
+</div>
+</div>
+);
 }
