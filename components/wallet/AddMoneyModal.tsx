@@ -4,7 +4,11 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/app/context/AuthContext";
 
-export default function AddMoneyModal({ reload }) {
+interface AddMoneyModalProps {
+  reload: () => void;
+}
+
+export default function AddMoneyModal({ reload }: AddMoneyModalProps)  {
   const [amount, setAmount] = useState("");
   const { user } = useAuth();
 
@@ -15,6 +19,7 @@ export default function AddMoneyModal({ reload }) {
       alert(user.blockedReason || "Your account has been blocked");
       return;
     }
+
 
     if (!amount || Number(amount) <= 0) {
       alert("Please enter a valid amount");
