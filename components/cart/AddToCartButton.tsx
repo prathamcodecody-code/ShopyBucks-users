@@ -31,51 +31,60 @@ export default function AddToCartButton({
   const [loading, setLoading] = useState(false);
 
   const handleAddToCart = async () => {
-    if (!productId) {
-      setToast({ type: "error", message: "Invalid product" });
-      return;
-    }
+  if (!productId) {
+    setToast({ type: "error", message: "Invalid product" });
+    return;
+  }
 
-    if (!user) {
-      setShowAuth(true);
-      return;
-    }
+  if (!user) {
+    setShowAuth(true);
+    return;
+  }
 
-    if (stock < 1) {
-      setToast({ type: "error", message: "This item is out of stock" });
-      return;
-    }
+  // 🚫 BLOCKED USER CHECK
+  if (user?.isBlocked) {
+    setToast({
+      type: "error",
+      message: user.blockedReason || "Your account has been blocked",
+    });
+    return;
+  }
 
-    // 🔥 ONLY validate variant if required
-    if (requiresVariantSelection && !variantId) {
-      setToast({ type: "error", message: "Please select an option" });
-      return;
-    }
+  if (stock < 1) {
+    setToast({ type: "error", message: "This item is out of stock" });
+    return;
+  }
 
-    try {
-      setLoading(true);
+  if (requiresVariantSelection && !variantId) {
+    setToast({ type: "error", message: "Please select an option" });
+    return;
+  }
 
-      await api.post("/cart/add", {
-        productId,
-        sizeId: variantId ?? null, // lipstick → null
-      });
+  try {
+    setLoading(true);
 
-      setToast({ type: "success", message: "Added to cart!" });
-    } catch (err: any) {
-      setToast({
-        type: "error",
-        message: err?.response?.data?.message || "Something went wrong",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    await api.post("/cart/add", {
+      productId,
+      sizeId: variantId ?? null,
+    });
+
+    setToast({ type: "success", message: "Added to cart!" });
+  } catch (err: any) {
+    setToast({
+      type: "error",
+      message: err?.response?.data?.message || "Something went wrong",
+    });
+  } finally {
+    setLoading(false);
+  }
+};;
 
   const isOutOfStock = stock < 1;
-  const isDisabled = disabled || loading || isOutOfStock;
+  const isDisabled = disabled || loading || isOutOfStock || user?.isBlocked;
 
   let buttonText = "Buy Now";
 if (loading) buttonText = "Adding...";
+else if (user?.isBlocked) buttonText = "Account Blocked";
 else if (isOutOfStock) buttonText = "Sold Out";
 else if (requiresVariantSelection && !variantId)
   buttonText = "Select Options";
