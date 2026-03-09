@@ -6,6 +6,7 @@ interface AuthContextType {
   user: any;
   token: string | null;
   loading: boolean; // ✅ Added
+  isBlocked: boolean; 
   loginWithToken: (token: string) => void;
   logout: () => void;
   setUser: (user: any) => void;
@@ -17,6 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true); // ✅ Added
+  const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("token");
@@ -41,13 +43,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (res.ok) {
-        const data = await res.json();
-        setUser(data);
-      } else {
+  const data = await res.json();
+  setUser(data);
+  setIsBlocked(data?.isBlocked || false); // ✅
+} else {
         // Token is invalid, clear it
         localStorage.removeItem("token");
         setToken(null);
         setUser(null);
+        setIsBlocked(false);
       }
     } catch (error) {
       console.error("Failed to fetch user:", error);
@@ -73,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, loginWithToken, logout, setUser }}>
+    <AuthContext.Provider value={{ user, token, loading, loginWithToken, logout, setUser ,  isBlocked  }}>
       {children}
     </AuthContext.Provider>
   );
