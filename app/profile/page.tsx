@@ -5,14 +5,17 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import AuthModal from "../auth/AuthModal";
-import { User, Package, LogOut, Edit2, ShieldCheck, Mail, Phone, MapPin, ChevronRight, Plus } from "lucide-react";
+import { User, Package, LogOut, Edit2, ShieldCheck, Mail, Phone, MapPin, ChevronRight, Plus, Wallet } from "lucide-react";
 import toast from "react-hot-toast";
+import WalletBalanceCard from "@/components/wallet/WalletBalanceCard";
+import WalletTransactions from "@/components/wallet/WalletTransactions";
 
 export default function ProfilePage() {
   const { user, logout, setUser } = useAuth();
+  const isBlocked = user?.isBlocked;
   const router = useRouter();
   const [showAuth, setShowAuth] = useState(false);
-  const [activeTab, setActiveTab] = useState<"account" | "orders" | "addresses">("account");
+  const [activeTab, setActiveTab] = useState<"account" | "orders" | "addresses" | "wallet">("account");
 
   if (!user) {
     return (
@@ -43,17 +46,40 @@ export default function ProfilePage() {
           <p className="text-genz-muted font-medium">Manage your settings and order history</p>
         </header>
 
+    {isBlocked && (
+  <div className="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+    <p className="font-bold text-sm">Your account has been blocked.</p>
+
+    {user?.blockedReason && (
+      <p className="text-sm mt-1">Reason: {user.blockedReason}</p>
+    )}
+
+    <p className="text-xs mt-2 text-red-600">
+      You can view your account information but actions are disabled.
+      
+    </p>
+    <p className="text-xs mt-2 text-red-600">
+      You can contact our support team : support@shopybucks.com
+      
+    </p>
+
+  </div>
+)}
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* SIDEBAR */}
           <aside className="space-y-3">
             <div className="bg-genz-card rounded-genz border border-genz-border p-2 shadow-sm">
-              <SidebarBtn active={activeTab === "account"} onClick={() => setActiveTab("account")} icon={<User size={20} />}>
+              <SidebarBtn active={activeTab === "account"} onClick={() =>  !isBlocked && setActiveTab("account")} icon={<User size={20} />}>
                 Account Details
               </SidebarBtn>
-              <SidebarBtn active={activeTab === "orders"} onClick={() => setActiveTab("orders")} icon={<Package size={20} />}>
+              <SidebarBtn active={activeTab === "orders"} onClick={() =>  !isBlocked && setActiveTab("orders")} icon={<Package size={20} />}>
                 My Orders
               </SidebarBtn>
-              <SidebarBtn active={activeTab === "addresses"} onClick={() => setActiveTab("addresses")} icon={<MapPin size={20} />}>
+              <SidebarBtn active={activeTab === "wallet"} onClick={() =>  !isBlocked && setActiveTab("wallet")} icon={<Wallet size={20} />}>
+                My Wallet
+              </SidebarBtn>
+              <SidebarBtn active={activeTab === "addresses"} onClick={() =>  !isBlocked && setActiveTab("addresses")} icon={<MapPin size={20} />}>
                 Addresses
               </SidebarBtn>
             </div>
@@ -69,9 +95,10 @@ export default function ProfilePage() {
 
           {/* CONTENT SECTION */}
           <section className="md:col-span-3">
-            {activeTab === "account" && <AccountDetails user={user} setUser={setUser} />}
-            {activeTab === "orders" && <OrdersShortcut />}
-            {activeTab === "addresses" && <AddressManager />}
+            {activeTab === "account" &&  <AccountDetails user={user} setUser={setUser} />}
+            {activeTab === "orders" &&  !isBlocked && <OrdersShortcut />}
+            {activeTab === "wallet" &&  !isBlocked &&  <WalletSection />}
+            {activeTab === "addresses"  && !isBlocked &&  <AddressManager />}
           </section>
         </div>
       </div>
@@ -115,7 +142,11 @@ function AccountDetails({ user, setUser }: any) {
         </div>
         {!editing && (
           <button
-            onClick={() => setEditing(true)}
+            disabled={user?.isBlocked}
+  onClick={() => {
+    if (user?.isBlocked) return;
+    setEditing(true);
+  }}
             className="flex items-center gap-2 bg-genz-bg px-4 py-2 rounded-xl hover:bg-genz-border font-bold text-sm transition-all"
           >
             <Edit2 size={14} /> Edit
@@ -166,6 +197,17 @@ function AccountDetails({ user, setUser }: any) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ---------------- WALLET SECTION ---------------- */
+
+function WalletSection() {
+  return (
+    <div className="space-y-6">
+      <WalletBalanceCard />
+      <WalletTransactions />
     </div>
   );
 }
@@ -229,7 +271,6 @@ function OrdersShortcut() {
   );
 }
 
-// ... AddressManager and AddressForm would follow similar styling logic (rounded-genz, font-black, genz-accent)
 function AddressManager() {
   const [addresses, setAddresses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
