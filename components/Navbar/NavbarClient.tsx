@@ -6,12 +6,13 @@ import { FiSearch, FiMenu, FiChevronDown } from "react-icons/fi";
 import { HiOutlineShoppingBag, HiOutlineShoppingCart, HiOutlineUser } from "react-icons/hi2";
 import { LuStore } from "react-icons/lu"; 
 import { useRouter } from "next/navigation";
-import MobileMenu from "./MobileMenu";
-import MegaMenu from "./MegaMenu";
+import MobileMenu from "../Navbar/MobileMenu";
+import MegaMenu from "../Navbar/MegaMenu";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthModal } from "@/app/auth/AuthModalContext";
+import NotificationBell from "../notification/NotificationBell";
 
-export default function NavbarClient({ categories }: { categories: any[] }) {
+export default function NavbarClient({ categories = [] }: { categories?: any[] }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { openLogin, openRegister } = useAuthModal();
@@ -110,7 +111,7 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
                 </div>
               )}
             </div>
-
+ <NotificationBell />
             <Link href="/cart" className="flex items-center gap-2 group font-bold transition-colors hover:text-amazon-orange">
               <div className="relative">
                 <HiOutlineShoppingCart size={24} />
@@ -136,7 +137,7 @@ export default function NavbarClient({ categories }: { categories: any[] }) {
       <div className="hidden md:block bg-white border-b border-genz-border shadow-sm relative z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-8 relative">
           <div className="flex items-center gap-8 lg:gap-12 overflow-x-auto no-scrollbar py-4">
-            {categories.map((c) => (
+            {categories?.map((c) => (
               <div 
                 key={c.id} 
                 onMouseEnter={() => handleMouseEnter(c.id)}
