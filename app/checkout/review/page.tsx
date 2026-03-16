@@ -13,7 +13,8 @@ import {
   HiCheck,
   HiArrowLeft,
   HiOutlineMapPin,
-  HiOutlineTicket
+  HiOutlineTicket,
+  HiOutlineWallet // ✅ NEW ICON
 } from "react-icons/hi2";
 import toast from "react-hot-toast";
 
@@ -78,11 +79,15 @@ export default function CheckoutReviewPage() {
   const [shippingError, setShippingError] = useState("");
   const [couponError, setCouponError] = useState("");
 
+  // ✅ NEW: Wallet states
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
+  const [walletLoading, setWalletLoading] = useState(false);
+
   /* ================= GUARDS - WAIT FOR HYDRATION ================= */
   useEffect(() => {
     if (!isHydrated) return;
     
-    // Don't redirect if we're currently loading (placing order)
     if (loading) return;
 
     if (!addressId) {
@@ -123,6 +128,20 @@ export default function CheckoutReviewPage() {
         const cartRes = await api.get("/cart");
         setCartItems(cartRes.data.items || []);
 
+        // ✅ NEW: Fetch wallet balance (only for online payment)
+        if (paymentMethod === "ONLINE") {
+          try {
+            setWalletLoading(true);
+            const walletRes = await api.get("/wallet");
+            setWalletBalance(Number(walletRes.data.balance) || 0);
+          } catch (err) {
+            console.error("Failed to fetch wallet:", err);
+            setWalletBalance(0);
+          } finally {
+            setWalletLoading(false);
+          }
+        }
+
       } catch (err: any) {
         toast.error("Failed to load order details");
         console.error(err);
@@ -132,7 +151,7 @@ export default function CheckoutReviewPage() {
     };
 
     fetchData();
-  }, [addressId, isHydrated, router]);
+  }, [addressId, isHydrated, router, paymentMethod]);
 
   /* ================= CALCULATE SHIPPING ================= */
   useEffect(() => {
@@ -191,6 +210,10 @@ export default function CheckoutReviewPage() {
   const totalBeforeDiscount = subtotal + deliveryFee;
   const finalTotal = Math.max(0, totalBeforeDiscount - discount);
 
+  // ✅ NEW: Wallet calculations
+  const walletUsable = useWallet && paymentMethod === "ONLINE" ? Math.min(walletBalance, finalTotal) : 0;
+  const remainingPayable = Math.max(0, finalTotal - walletUsable);
+
   /* ================= APPLY COUPON ================= */
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -222,65 +245,93 @@ export default function CheckoutReviewPage() {
   };
 
   /* ================= PLACE ORDER ================= */
-const placeOrder = async () => {
-  console.log("appliedCoupon state:", appliedCoupon);
-  console.log("Sending body:", { addressId, paymentMethod, couponCode: appliedCoupon });
-  
-  try {
-    setLoading(true);
-    setError("");
+  const placeOrder = async () => {
+    console.log("appliedCoupon state:", appliedCoupon);
+    console.log("useWallet:", useWallet);
+    console.log("Sending body:", { 
+      addressId, 
+      paymentMethod, 
+      couponCode: appliedCoupon,
+      useWallet: useWallet && paymentMethod === "ONLINE",
+    });
+    
+    try {
+      setLoading(true);
+      setError("");
 
-    // COD Flow
-    if (paymentMethod === "COD") {
-      const res = await api.post("/orders", {
+      // ✅ NEW: Full Wallet Payment (if wallet covers entire amount)
+      if (useWallet && walletBalance >= finalTotal && paymentMethod === "ONLINE") {
+        const res = await api.post("/orders", {
+          addressId,
+          paymentMethod: "WALLET", // ✅ Use WALLET payment method
+          couponCode: appliedCoupon || undefined,
+        });
+
+        router.replace(`/checkout/success?orderId=${res.data.orderId}&type=WALLET`);
+        return;
+      }
+
+      // COD Flow
+      if (paymentMethod === "COD") {
+        const res = await api.post("/orders", {
+          addressId,
+          paymentMethod,
+          couponCode: appliedCoupon || undefined,
+        });
+
+        router.replace(`/checkout/success?orderId=${res.data.orderId}&type=COD`);
+        return;
+      }
+
+      // ✅ UPDATED: Online Payment Flow (with or without wallet)
+      const orderRes = await api.post("/orders", {
         addressId,
-        paymentMethod,
+        paymentMethod: "ONLINE",
         couponCode: appliedCoupon || undefined,
+        useWallet: useWallet, // ✅ NEW: Send wallet preference
       });
 
-      router.replace(`/checkout/success?orderId=${res.data.orderId}&type=COD`);
-      return;
+      // ✅ NEW: If wallet covered entire amount, no payment gateway needed
+      if (orderRes.data.remainingPayable === 0) {
+        router.replace(`/checkout/success?orderId=${orderRes.data.orderId}&type=WALLET`);
+        return;
+      }
+
+      const payment = orderRes.data.payment ?? orderRes.data;
+
+      console.log("Payment data received:", payment);
+      if (!payment?.paymentUrl) {
+        console.error("Unexpected payment response:", orderRes.data);
+        throw new Error("Payment gateway initialization failed");
+      }
+
+      // Validate payment data
+      if (!payment || !payment.paymentUrl) {
+        throw new Error("Invalid payment data received from server");
+      }
+
+      console.log("Redirecting to:", payment.paymentUrl);
+      
+      const walletMessage = useWallet && walletUsable > 0 
+        ? `₹${walletUsable} will be deducted from wallet. ` 
+        : '';
+      
+      toast.loading(`${walletMessage}Redirecting to payment gateway...`, { duration: 2000 });
+
+      // Small delay for user to see the loading message
+      setTimeout(() => {
+        window.location.href = payment.paymentUrl;
+      }, 500);
+      
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Failed to place order");
+      setLoading(false);
+      toast.error(err?.response?.data?.message || "Failed to place order");
+      console.error("Order placement error:", err);
     }
+  }; 
 
-    // Online Payment Flow (Easebuzz)
-    const orderRes = await api.post("/orders", {
-      addressId,
-      paymentMethod: "ONLINE",
-      couponCode: appliedCoupon || undefined,
-    });
-
-    const payment = orderRes.data.payment ?? orderRes.data;
-
-    console.log("Payment data received:", payment);
-    if (!payment?.paymentUrl) {
-  console.error("Unexpected payment response:", orderRes.data);
-  throw new Error("Payment gateway initialization failed");
-}
-
-    // Validate payment data
-    if (!payment || !payment.paymentUrl) {
-      throw new Error("Invalid payment data received from server");
-    }
-
-    // ✅ SIMPLIFIED: Just redirect to the payment URL
-    // The backend already got the access key and constructed the full URL
-    console.log("Redirecting to:", payment.paymentUrl);
-    
-    toast.loading("Redirecting to payment gateway...", { duration: 2000 });
-
-    // Small delay for user to see the loading message
-    setTimeout(() => {
-      window.location.href = payment.paymentUrl;
-    }, 500);
-    
-  } catch (err: any) {
-    setError(err?.response?.data?.message || "Failed to place order");
-    setLoading(false);
-    toast.error(err?.response?.data?.message || "Failed to place order");
-    console.error("Order placement error:", err);
-  }
-}; 
- /* ================= LOADING STATES ================= */
+  /* ================= LOADING STATES ================= */
   
   // Wait for hydration
   if (!isHydrated) {
@@ -429,6 +480,84 @@ const placeOrder = async () => {
           {/* RIGHT: PRICE SUMMARY & CTA */}
           <div className="space-y-4 lg:sticky lg:top-24">
             
+            {/* ✅ NEW: Wallet Section (only for online payment) */}
+            {paymentMethod === "ONLINE" && (
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-6 rounded-genz border-2 border-purple-200 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <HiOutlineWallet size={20} className="text-purple-600" />
+                  <h3 className="text-xs font-black text-purple-900 uppercase tracking-widest">
+                    Use Wallet Balance
+                  </h3>
+                </div>
+
+                {walletLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-purple-600">
+                    <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                    Loading wallet...
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-purple-700">Available Balance</span>
+                      <span className="text-xl font-black text-purple-900">₹{walletBalance.toLocaleString()}</span>
+                    </div>
+
+                    {walletBalance > 0 ? (
+                      <>
+                        <label className="flex items-center gap-3 p-3 bg-white border-2 border-purple-200 rounded-xl cursor-pointer hover:border-purple-400 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={useWallet}
+                            onChange={(e) => setUseWallet(e.target.checked)}
+                            className="w-5 h-5 accent-purple-600 cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-black text-purple-900">
+                              Use ₹{Math.min(walletBalance, finalTotal).toLocaleString()} from wallet
+                            </p>
+                            <p className="text-xs font-medium text-purple-600">
+                              {walletBalance >= finalTotal 
+                                ? "Pay entire amount from wallet" 
+                                : `Save ₹${Math.min(walletBalance, finalTotal).toLocaleString()} on this order`}
+                            </p>
+                          </div>
+                        </label>
+
+                        {useWallet && (
+                          <div className="bg-purple-100 border-2 border-purple-300 rounded-xl p-3 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="font-bold text-purple-700">Wallet Deduction</span>
+                              <span className="font-black text-purple-900">-₹{walletUsable.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="font-bold text-purple-700">
+                                {walletBalance >= finalTotal ? "Balance After" : "Pay via Gateway"}
+                              </span>
+                              <span className="font-black text-purple-900">
+                                {walletBalance >= finalTotal 
+                                  ? `₹${(walletBalance - finalTotal).toLocaleString()}` 
+                                  : `₹${remainingPayable.toLocaleString()}`}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-3">
+                        <p className="text-sm font-bold text-purple-600">No wallet balance available</p>
+                        <button
+                          onClick={() => router.push("/profile/wallet")}
+                          className="text-xs font-bold text-purple-700 underline mt-1 hover:text-purple-900"
+                        >
+                          Add money to wallet
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Coupon Section */}
             <div className="bg-genz-card p-6 rounded-genz border-2 border-genz-border shadow-sm">
               <div className="flex items-center gap-2 mb-4">
@@ -517,17 +646,47 @@ const placeOrder = async () => {
                     <span>-₹{discount.toLocaleString()}</span>
                   </div>
                 )}
+
+                {/* ✅ NEW: Wallet deduction line */}
+                {useWallet && walletUsable > 0 && (
+                  <div className="flex justify-between text-sm font-bold text-purple-600">
+                    <span>Wallet Deduction</span>
+                    <span>-₹{walletUsable.toLocaleString()}</span>
+                  </div>
+                )}
                 
                 <div className="pt-4 border-t-2 border-genz-border">
-                  <div className="flex justify-between items-center">
-                    <span className="text-base font-black text-genz-ink">Total Amount</span>
-                    <span className="text-2xl font-black text-genz-ink">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-bold text-genz-muted">Order Total</span>
+                    <span className="text-lg font-black text-genz-ink">
                       ₹{finalTotal.toLocaleString()}
                     </span>
                   </div>
-                  {(productDiscount + discount) > 0 && (
-                    <p className="text-xs font-bold text-green-600 mt-1 text-right">
-                      You saved ₹{(productDiscount + discount).toLocaleString()}!
+
+                  {/* ✅ NEW: Show remaining payable if using wallet */}
+                  {useWallet && walletUsable > 0 && (
+                    <div className="flex justify-between items-center pt-2 border-t-2 border-purple-200">
+                      <span className="text-base font-black text-purple-900">
+                        {remainingPayable === 0 ? "Paid from Wallet" : "Pay Now"}
+                      </span>
+                      <span className="text-2xl font-black text-purple-900">
+                        ₹{remainingPayable.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
+                  {!useWallet && (
+                    <div className="flex justify-between items-center pt-2 border-t-2 border-genz-border">
+                      <span className="text-base font-black text-genz-ink">Total Amount</span>
+                      <span className="text-2xl font-black text-genz-ink">
+                        ₹{finalTotal.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
+                  {(productDiscount + discount + walletUsable) > 0 && (
+                    <p className="text-xs font-bold text-green-600 mt-2 text-right">
+                      You saved ₹{(productDiscount + discount + (useWallet ? walletUsable : 0)).toLocaleString()}!
                     </p>
                   )}
                 </div>
@@ -559,7 +718,7 @@ const placeOrder = async () => {
                     </>
                   ) : (
                     <>
-                      Place Order
+                      {useWallet && remainingPayable === 0 ? "Place Order (Wallet)" : "Place Order"}
                       <HiOutlineChevronRight className="group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
