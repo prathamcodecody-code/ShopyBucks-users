@@ -13,6 +13,7 @@ import {
   HiOutlineReceiptPercent,
   HiOutlineBanknotes,
   HiOutlineCreditCard,
+  HiOutlineWallet, // ✅ NEW ICON
 } from "react-icons/hi2";
 
 // ✅ Helper to derive delivery status from seller orders
@@ -123,13 +124,18 @@ export default function OrdersPage() {
               // ── Derived price values ──────────────────────────
               const totalAmount      = Number(o.totalAmount ?? 0);
               const couponDiscount   = Number(o.couponDiscount ?? 0);
+              const walletUsed       = Number(o.walletUsed ?? 0); // ✅ NEW
               const shippingCharge   = Number(o.shippingCharge ?? o.sellerOrders?.reduce((s: number, so: any) => s + Number(so.shippingCharge ?? 0), 0) ?? 0);
               // subtotal = what user paid for products (before shipping, after coupon)
               const subtotal         = totalAmount - shippingCharge + couponDiscount;
-              const totalSaved       = couponDiscount;
+              const totalSaved       = couponDiscount + walletUsed; // ✅ UPDATED: Include wallet savings
               const itemCount        = o.items?.length ?? o._count?.items ?? o.orderItems?.length ?? null;
               const paymentMethod    = o.paymentMethod ?? null;
               const couponCode       = o.couponCode ?? null;
+
+              // ✅ Determine payment display
+              const isWalletPayment = paymentMethod === "WALLET" || walletUsed >= totalAmount;
+              const isPartialWallet = walletUsed > 0 && walletUsed < totalAmount;
 
               return (
                 <div
@@ -155,13 +161,36 @@ export default function OrdersPage() {
                         {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </div>
 
-                      {/* Payment badge */}
+                      {/* ✅ UPDATED: Payment badge with wallet support */}
                       {paymentMethod && (
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-amazon-mutedText bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-                          {paymentMethod === "COD"
-                            ? <HiOutlineBanknotes size={13} />
-                            : <HiOutlineCreditCard size={13} />}
-                          {paymentMethod === "COD" ? "Cash on Delivery" : "Online"}
+                        <div className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border ${
+                          isWalletPayment 
+                            ? 'bg-purple-50 text-purple-600 border-purple-100' 
+                            : paymentMethod === "COD"
+                            ? 'bg-gray-50 text-amazon-mutedText border-gray-100'
+                            : 'bg-gray-50 text-amazon-mutedText border-gray-100'
+                        }`}>
+                          {isWalletPayment ? (
+                            <>
+                              <HiOutlineWallet size={13} />
+                              Wallet Payment
+                            </>
+                          ) : isPartialWallet ? (
+                            <>
+                              <HiOutlineWallet size={13} />
+                              Wallet + {paymentMethod === "COD" ? "COD" : "Online"}
+                            </>
+                          ) : paymentMethod === "COD" ? (
+                            <>
+                              <HiOutlineBanknotes size={13} />
+                              Cash on Delivery
+                            </>
+                          ) : (
+                            <>
+                              <HiOutlineCreditCard size={13} />
+                              Online
+                            </>
+                          )}
                         </div>
                       )}
 
@@ -175,7 +204,7 @@ export default function OrdersPage() {
 
                   {/* ── PRICE BREAKDOWN ── */}
                   <div className="px-6 py-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className={`grid gap-4 ${walletUsed > 0 ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'}`}>
 
                       {/* Items subtotal */}
                       <div className="flex items-start gap-2">
@@ -220,6 +249,20 @@ export default function OrdersPage() {
                         </div>
                       </div>
 
+                      {/* ✅ NEW: Wallet deduction (only show if wallet was used) */}
+                      {walletUsed > 0 && (
+                        <div className="flex items-start gap-2">
+                          <HiOutlineWallet size={15} className="text-purple-600 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-[10px] font-black text-amazon-mutedText uppercase tracking-wider leading-none mb-1">Wallet</p>
+                            <p className="text-sm font-black text-purple-600">-₹{walletUsed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            {isWalletPayment && (
+                              <p className="text-[10px] font-bold text-purple-600 mt-0.5 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100 inline-block">Full Payment</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Total paid */}
                       <div className="flex items-start gap-2">
                         <HiOutlineBanknotes size={15} className="text-amazon-orange mt-0.5 shrink-0" />
@@ -235,6 +278,28 @@ export default function OrdersPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* ✅ NEW: Wallet payment highlight (if full wallet payment) */}
+                  {isWalletPayment && (
+                    <div className="px-6 py-2.5 bg-gradient-to-r from-purple-50 to-purple-100/50 border-t border-purple-100">
+                      <div className="flex items-center gap-2 text-xs font-bold text-purple-700">
+                        <HiOutlineWallet size={14} />
+                        <span>Paid entirely from your wallet balance</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ✅ NEW: Partial wallet payment info */}
+                  {isPartialWallet && !isWalletPayment && (
+                    <div className="px-6 py-2.5 bg-gradient-to-r from-purple-50 to-blue-50 border-t border-purple-100">
+                      <div className="flex items-center gap-2 text-xs font-bold text-purple-700">
+                        <HiOutlineWallet size={14} />
+                        <span>
+                          ₹{walletUsed.toLocaleString('en-IN')} from wallet + ₹{(totalAmount - walletUsed).toLocaleString('en-IN')} via {paymentMethod === "COD" ? "COD" : "online payment"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* ── FOOTER CTA ── */}
                   <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
