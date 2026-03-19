@@ -6,6 +6,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useAuthModal } from "@/app/auth/AuthModalContext";
 import { HiXMark } from "react-icons/hi2";
 import { Input, PrimaryButton } from "@/components/Home/AuthComponents";
+import { Gift, CheckCircle, XCircle } from "lucide-react";
 
 type Step = "form" | "otp";
 
@@ -27,7 +28,13 @@ export default function RegisterModal({
     email: "",
     phone: "",
     password: "",
+    referralCode: "",
   });
+
+  // Referral validation state
+  const [referralValidating, setReferralValidating] = useState(false);
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+  const [referrerName, setReferrerName] = useState<string>("");
 
   // Validation State
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -44,6 +51,32 @@ export default function RegisterModal({
     setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
+  // ✅ Validate referral code
+  const validateReferralCode = async (code: string) => {
+    if (!code) {
+      setReferralValid(null);
+      setReferrerName("");
+      return;
+    }
+
+    setReferralValidating(true);
+    try {
+      const res = await api.get(`/referral/validate?code=${code}`); // ✅ Fixed URL
+      if (res.data.valid) {
+        setReferralValid(true);
+        setReferrerName(res.data.referrer.name || "Someone");
+      } else {
+        setReferralValid(false);
+        setReferrerName("");
+      }
+    } catch (err) {
+      setReferralValid(false);
+      setReferrerName("");
+    } finally {
+      setReferralValidating(false);
+    }
+  };
+
   const isFormValid = 
     form.name.length >= 2 && 
     /\S+@\S+\.\S+/.test(form.email) && 
@@ -51,14 +84,47 @@ export default function RegisterModal({
     form.password.length >= 6 &&
     !Object.values(errors).some(err => err !== "");
 
-  useEffect(() => {
-    if (show) {
-      setStep("form");
-      setForm({ name: "", email: "", phone: "", password: "" });
-      setErrors({});
-      setOtp("");
+ useEffect(() => {
+  if (show) {
+    setStep("form");
+    setErrors({});
+    setOtp("");
+    
+    // ✅ Check for pending referral code from URL
+    const pendingCode = localStorage.getItem("pendingReferralCode");
+    
+    if (pendingCode) {
+      // Set form with the referral code
+      setForm({ 
+        name: "", 
+        email: "", 
+        phone: "", 
+        password: "", 
+        referralCode: pendingCode 
+      });
+      
+      // Validate it
+      validateReferralCode(pendingCode);
+      
+      // Clear from localStorage
+      localStorage.removeItem("pendingReferralCode");
+      
+      // ✅ DON'T reset validation state here!
+      // The validateReferralCode function will set it
+    } else {
+      // No pending code - reset everything
+      setForm({ 
+        name: "", 
+        email: "", 
+        phone: "", 
+        password: "", 
+        referralCode: "" 
+      });
+      setReferralValid(null);
+      setReferrerName("");
     }
-  }, [show]);
+  }
+}, [show]);
 
   const handleSignup = async () => {
     if (!isFormValid) return;
@@ -118,7 +184,7 @@ export default function RegisterModal({
           </div>
         </div>
 
-        <div className="flex-1 p-8 md:p-12 flex flex-col bg-white">
+        <div className="flex-1 p-8 md:p-12 flex flex-col bg-white overflow-y-auto">
           <button onClick={onClose} className="self-end text-genz-muted hover:text-genz-ink transition-colors mb-4">
             <HiXMark size={28} />
           </button>
@@ -169,6 +235,74 @@ export default function RegisterModal({
                     />
                     {errors.password && <p className="text-[9px] text-red-500 font-bold absolute -bottom-4">{errors.password}</p>}
                   </div>
+
+                  {/* ✅ REFERRAL CODE INPUT */}
+                  <div className="relative pt-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Gift size={14} className="text-genz-accent" />
+                      <label className="text-[10px] font-black text-gray-600 uppercase tracking-wider">
+                        Have a Referral Code? (Optional)
+                      </label>
+                    </div>
+                    
+                    <div className="relative">
+                      <Input
+                        placeholder="Enter referral code"
+                        value={form.referralCode}
+                        onChange={(v: any) => {
+                          const code = v.toUpperCase();
+                          setForm({ ...form, referralCode: code });
+                          
+                          // Validate after 1 second of no typing
+                          const timer = setTimeout(() => {
+                            validateReferralCode(code);
+                          }, 1000);
+                          
+                          return () => clearTimeout(timer);
+                        }}
+                      />
+                      <p className="text-xs text-red-500 mt-1">
+    Debug: "{form.referralCode}" (length: {form.referralCode.length})
+  </p>
+                      {/* Validation Icons */}
+                      {form.referralCode && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {referralValidating ? (
+                            <div className="w-4 h-4 border-2 border-genz-accent border-t-transparent rounded-full animate-spin" />
+                          ) : referralValid === true ? (
+                            <CheckCircle size={16} className="text-green-600" />
+                          ) : referralValid === false ? (
+                            <XCircle size={16} className="text-red-600" />
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Referral Feedback */}
+                    {referralValid === true && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-100 rounded-lg">
+                        <p className="text-[10px] text-green-700 font-bold flex items-center gap-1">
+                          <CheckCircle size={12} />
+                          Valid code! You were referred by <span className="text-green-800">{referrerName}</span>
+                        </p>
+                      </div>
+                    )}
+                    
+                    {referralValid === false && (
+                      <div className="mt-2 p-2 bg-red-50 border border-red-100 rounded-lg">
+                        <p className="text-[10px] text-red-700 font-bold flex items-center gap-1">
+                          <XCircle size={12} />
+                          Invalid referral code
+                        </p>
+                      </div>
+                    )}
+
+                    {!form.referralCode && (
+                      <p className="text-[9px] text-gray-500 font-medium mt-1">
+                        Get rewards when your friend uses your referral code!
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="pt-6">
@@ -202,6 +336,16 @@ export default function RegisterModal({
                   <p className="text-xs font-bold text-genz-muted uppercase tracking-tight">
                     Code sent to <span className="text-genz-ink">{form.phone}</span>
                   </p>
+                  
+                  {/* ✅ Show referral bonus message if code was used */}
+                  {referralValid && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-xs text-green-700 font-bold flex items-center justify-center gap-1">
+                        <Gift size={14} />
+                        {referrerName} will get rewards after you verify!
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="relative">
