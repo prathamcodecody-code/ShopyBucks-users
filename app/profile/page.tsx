@@ -5,7 +5,10 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import AuthModal from "../auth/AuthModal";
-import { User, Package, LogOut, Edit2, ShieldCheck, Mail, Phone, MapPin, ChevronRight, Plus, Wallet } from "lucide-react";
+import { 
+  User, Package, LogOut, Edit2, ShieldCheck, MapPin, ChevronRight, Plus, Wallet,
+  Gift, Copy, Share2, Users, TrendingUp, Clock, CheckCircle
+} from "lucide-react";
 import toast from "react-hot-toast";
 import WalletBalanceCard from "@/components/wallet/WalletBalanceCard";
 import WalletTransactions from "@/components/wallet/WalletTransactions";
@@ -15,7 +18,7 @@ export default function ProfilePage() {
   const isBlocked = user?.isBlocked;
   const router = useRouter();
   const [showAuth, setShowAuth] = useState(false);
-  const [activeTab, setActiveTab] = useState<"account" | "orders" | "addresses" | "wallet">("account");
+  const [activeTab, setActiveTab] = useState<"account" | "orders" | "addresses" | "wallet" | "referral">("account");
 
   if (!user) {
     return (
@@ -46,40 +49,38 @@ export default function ProfilePage() {
           <p className="text-genz-muted font-medium">Manage your settings and order history</p>
         </header>
 
-    {isBlocked && (
-  <div className="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
-    <p className="font-bold text-sm">Your account has been blocked.</p>
-
-    {user?.blockedReason && (
-      <p className="text-sm mt-1">Reason: {user.blockedReason}</p>
-    )}
-
-    <p className="text-xs mt-2 text-red-600">
-      You can view your account information but actions are disabled.
-      
-    </p>
-    <p className="text-xs mt-2 text-red-600">
-      You can contact our support team : support@shopybucks.com
-      
-    </p>
-
-  </div>
-)}
+        {isBlocked && (
+          <div className="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+            <p className="font-bold text-sm">Your account has been blocked.</p>
+            {user?.blockedReason && (
+              <p className="text-sm mt-1">Reason: {user.blockedReason}</p>
+            )}
+            <p className="text-xs mt-2 text-red-600">
+              You can view your account information but actions are disabled.
+            </p>
+            <p className="text-xs mt-2 text-red-600">
+              You can contact our support team: support@shopybucks.com
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* SIDEBAR */}
           <aside className="space-y-3">
             <div className="bg-genz-card rounded-genz border border-genz-border p-2 shadow-sm">
-              <SidebarBtn active={activeTab === "account"} onClick={() =>  !isBlocked && setActiveTab("account")} icon={<User size={20} />}>
+              <SidebarBtn active={activeTab === "account"} onClick={() => !isBlocked && setActiveTab("account")} icon={<User size={20} />}>
                 Account Details
               </SidebarBtn>
-              <SidebarBtn active={activeTab === "orders"} onClick={() =>  !isBlocked && setActiveTab("orders")} icon={<Package size={20} />}>
+              <SidebarBtn active={activeTab === "orders"} onClick={() => !isBlocked && setActiveTab("orders")} icon={<Package size={20} />}>
                 My Orders
               </SidebarBtn>
-              <SidebarBtn active={activeTab === "wallet"} onClick={() =>  !isBlocked && setActiveTab("wallet")} icon={<Wallet size={20} />}>
+              <SidebarBtn active={activeTab === "wallet"} onClick={() => !isBlocked && setActiveTab("wallet")} icon={<Wallet size={20} />}>
                 My Wallet
               </SidebarBtn>
-              <SidebarBtn active={activeTab === "addresses"} onClick={() =>  !isBlocked && setActiveTab("addresses")} icon={<MapPin size={20} />}>
+              <SidebarBtn active={activeTab === "referral"} onClick={() => !isBlocked && setActiveTab("referral")} icon={<Gift size={20} />}>
+                Refer & Earn
+              </SidebarBtn>
+              <SidebarBtn active={activeTab === "addresses"} onClick={() => !isBlocked && setActiveTab("addresses")} icon={<MapPin size={20} />}>
                 Addresses
               </SidebarBtn>
             </div>
@@ -95,14 +96,294 @@ export default function ProfilePage() {
 
           {/* CONTENT SECTION */}
           <section className="md:col-span-3">
-            {activeTab === "account" &&  <AccountDetails user={user} setUser={setUser} />}
-            {activeTab === "orders" &&  !isBlocked && <OrdersShortcut />}
-            {activeTab === "wallet" &&  !isBlocked &&  <WalletSection />}
-            {activeTab === "addresses"  && !isBlocked &&  <AddressManager />}
+            {activeTab === "account" && <AccountDetails user={user} setUser={setUser} />}
+            {activeTab === "orders" && !isBlocked && <OrdersShortcut />}
+            {activeTab === "wallet" && !isBlocked && <WalletSection />}
+            {activeTab === "referral" && !isBlocked && <ReferralSection user={user} />}
+            {activeTab === "addresses" && !isBlocked && <AddressManager />}
           </section>
         </div>
       </div>
     </div>
+  );
+}
+
+/* ---------------- REFERRAL SECTION ---------------- */
+
+function ReferralSection({ user }: any) {
+  const [stats, setStats] = useState<any>(null);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchReferralData();
+  }, []);
+
+  const fetchReferralData = async () => {
+    try {
+      const [statsRes, referralsRes] = await Promise.all([
+        api.get("/referral/my-stats"),
+        api.get("/referral/my-referrals"),
+      ]);
+      setStats(statsRes.data);
+      setReferrals(referralsRes.data);
+    } catch (err) {
+      console.error("Failed to load referral data:", err);
+      toast.error("Failed to load referral data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyReferralCode = () => {
+    navigator.clipboard.writeText(user.referralCode);
+    toast.success("Referral code copied!");
+  };
+
+  const shareReferral = async () => {
+    const text = `Join ShopyBucks using my referral code ${user.referralCode} and we both get rewards! 🎁`;
+    const url = `${window.location.origin}/signup?ref=${user.referralCode}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Join ShopyBucks", text, url });
+      } catch (err) {
+        console.log("Share cancelled");
+      }
+    } else {
+      navigator.clipboard.writeText(`${text}\n${url}`);
+      toast.success("Referral link copied!");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-48 bg-genz-card rounded-genz"></div>
+        <div className="h-64 bg-genz-card rounded-genz"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* REFERRAL CODE CARD */}
+      <div className="bg-gradient-to-br from-genz-accent/10 to-genz-accent/5 rounded-genz border-2 border-genz-accent/20 p-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-genz-accent/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-genz-accent/20 rounded-xl text-genz-accent">
+              <Gift size={28} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black tracking-tight">Your Referral Code</h2>
+              <p className="text-genz-muted font-medium text-sm">Share with friends and earn rewards</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border-2 border-genz-border shadow-lg">
+            <p className="text-xs font-black uppercase text-genz-muted mb-2 tracking-widest">Your Code</p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-3xl font-black tracking-tighter text-genz-accent font-mono">
+                {user.referralCode}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={copyReferralCode}
+                  className="p-3 bg-genz-bg hover:bg-genz-border rounded-xl transition-all active:scale-95"
+                  title="Copy code"
+                >
+                  <Copy size={20} />
+                </button>
+                <button
+                  onClick={shareReferral}
+                  className="p-3 bg-genz-accent text-white hover:brightness-110 rounded-xl transition-all active:scale-95"
+                  title="Share"
+                >
+                  <Share2 size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-genz-softAccent/30 rounded-xl border border-genz-accent/20">
+            <p className="text-sm font-bold text-genz-ink">
+              💰 Earn ₹{stats?.rewardAmount || 5} for every friend who signs up and verifies their account!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* STATS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          icon={<Users className="text-blue-600" size={24} />}
+          label="Total Referrals"
+          value={stats?.totalReferrals || 0}
+          bgColor="bg-blue-50"
+        />
+        <StatCard
+          icon={<CheckCircle className="text-green-600" size={24} />}
+          label="Completed"
+          value={stats?.completedReferrals || 0}
+          bgColor="bg-green-50"
+        />
+        <StatCard
+          icon={<TrendingUp className="text-purple-600" size={24} />}
+          label="Total Earned"
+          value={`₹${stats?.totalEarned || 0}`}
+          bgColor="bg-purple-50"
+        />
+      </div>
+
+      {/* REFERRAL LIST */}
+      <div className="bg-genz-card rounded-genz border border-genz-border shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-genz-border">
+          <h3 className="text-xl font-black">Your Referrals</h3>
+          <p className="text-sm text-genz-muted font-medium">Track your referral progress</p>
+        </div>
+
+        <div className="divide-y divide-genz-border">
+          {referrals.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 bg-genz-softAccent rounded-full flex items-center justify-center mx-auto mb-4 text-genz-accent">
+                <Users size={32} />
+              </div>
+              <p className="text-genz-muted font-bold">No referrals yet</p>
+              <p className="text-sm text-genz-muted/60 font-medium mt-1">
+                Share your code to start earning!
+              </p>
+            </div>
+          ) : (
+            referrals.map((referral) => (
+              <div key={referral.id} className="p-6 hover:bg-genz-bg/50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={`p-2 rounded-lg ${
+                        referral.status === 'COMPLETED' 
+                          ? 'bg-green-50 text-green-600'
+                          : referral.status === 'PENDING'
+                          ? 'bg-orange-50 text-orange-600'
+                          : 'bg-gray-50 text-gray-600'
+                      }`}>
+                        {referral.status === 'COMPLETED' ? (
+                          <CheckCircle size={20} />
+                        ) : (
+                          <Clock size={20} />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-black text-genz-ink">
+                          {referral.referredUser.name || referral.referredUser.email}
+                        </p>
+                        <p className="text-xs text-genz-muted font-medium">
+                          {new Date(referral.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <StatusBadge status={referral.status} />
+                    {referral.status === 'COMPLETED' && (
+                      <p className="text-green-600 font-black text-sm mt-2">
+                        +₹{referral.rewardAmount}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {referral.status === 'PENDING' && !referral.referredUser.isVerified && (
+                  <div className="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-100">
+                    <p className="text-xs font-bold text-orange-600">
+                      ⏳ Waiting for friend to verify their account
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* HOW IT WORKS */}
+      <div className="bg-genz-card rounded-genz border border-genz-border p-6">
+        <h3 className="font-black text-lg mb-4 flex items-center gap-2">
+          <Gift size={20} className="text-genz-accent" />
+          How It Works
+        </h3>
+        <ol className="space-y-3">
+          {[
+            "Share your unique referral code with friends",
+            "Your friend signs up using your code",
+            "They verify their phone number",
+            "You both get rewarded instantly!"
+          ].map((step, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-genz-accent text-white rounded-full flex items-center justify-center text-xs font-black">
+                {i + 1}
+              </div>
+              <span className="text-sm font-medium text-genz-ink/80">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, bgColor }: any) {
+  return (
+    <div className="bg-genz-card rounded-genz border border-genz-border p-6 hover:border-genz-accent/50 transition-all">
+      <div className="flex items-center justify-between mb-3">
+        <div className={`p-3 ${bgColor} rounded-xl`}>
+          {icon}
+        </div>
+      </div>
+      <p className="text-xs font-black uppercase text-genz-muted tracking-widest mb-1">
+        {label}
+      </p>
+      <p className="text-2xl font-black text-genz-ink tracking-tight">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: any = {
+    COMPLETED: {
+      bg: "bg-green-50",
+      text: "text-green-600",
+      border: "border-green-200",
+      label: "Completed",
+    },
+    PENDING: {
+      bg: "bg-orange-50",
+      text: "text-orange-600",
+      border: "border-orange-200",
+      label: "Pending",
+    },
+    REJECTED: {
+      bg: "bg-red-50",
+      text: "text-red-600",
+      border: "border-red-200",
+      label: "Rejected",
+    },
+  };
+
+  const style = styles[status] || styles.PENDING;
+
+  return (
+    <span className={`inline-block px-3 py-1 text-xs font-black uppercase tracking-tight rounded-full border ${style.bg} ${style.text} ${style.border}`}>
+      {style.label}
+    </span>
   );
 }
 
@@ -143,10 +424,10 @@ function AccountDetails({ user, setUser }: any) {
         {!editing && (
           <button
             disabled={user?.isBlocked}
-  onClick={() => {
-    if (user?.isBlocked) return;
-    setEditing(true);
-  }}
+            onClick={() => {
+              if (user?.isBlocked) return;
+              setEditing(true);
+            }}
             className="flex items-center gap-2 bg-genz-bg px-4 py-2 rounded-xl hover:bg-genz-border font-bold text-sm transition-all"
           >
             <Edit2 size={14} /> Edit
