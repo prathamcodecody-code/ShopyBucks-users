@@ -13,12 +13,13 @@ import {
   AlertCircle,
   ChevronRight,
   Filter,
+  Gift,
 } from "lucide-react";
 
 interface Transaction {
   id: number;
   amount: number;
-  type: "ADD_MONEY" | "ORDER_PAYMENT" | "ORDER_REFUND" | "ADMIN_ADJUSTMENT";
+  type: "ADD_MONEY" | "ORDER_PAYMENT" | "ORDER_REFUND" | "ADMIN_ADJUSTMENT" | "REFERRAL_REWARD"; // ✅ Added
   reason: string;
   createdAt: string;
   referenceId?: number;
@@ -29,6 +30,7 @@ interface WalletSummary {
   totalAdded: number;
   totalSpent: number;
   totalRefunded: number;
+  totalReferralEarnings: number; // ✅ Added
   transactionCount: number;
 }
 
@@ -121,6 +123,7 @@ export default function WalletTransactions() {
       ORDER_PAYMENT: { label: "Payment", color: "bg-red-50 text-red-600 border-red-200" },
       ORDER_REFUND: { label: "Refund", color: "bg-green-50 text-green-600 border-green-200" },
       ADMIN_ADJUSTMENT: { label: "Adjustment", color: "bg-purple-50 text-purple-600 border-purple-200" },
+      REFERRAL_REWARD: { label: "Referral 🎁", color: "bg-orange-50 text-orange-600 border-orange-200" }, // ✅ Added
     };
     
     const badge = badges[type as keyof typeof badges] || { label: type, color: "bg-gray-50 text-gray-600 border-gray-200" };
@@ -165,7 +168,7 @@ export default function WalletTransactions() {
     <div className="space-y-6">
       {/* Wallet Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="border rounded-xl p-4 bg-gradient-to-br from-blue-50 to-white">
             <div className="flex items-center justify-between">
               <div>
@@ -211,6 +214,19 @@ export default function WalletTransactions() {
                 </p>
               </div>
               <RefreshCw className="w-8 h-8 text-purple-600" />
+            </div>
+          </div>
+
+          {/* ✅ NEW: Referral Earnings Card */}
+          <div className="border rounded-xl p-4 bg-gradient-to-br from-orange-50 to-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 font-medium">Referral Rewards</p>
+                <p className="text-2xl font-bold text-orange-600 mt-1">
+                  ₹{summary.totalReferralEarnings?.toLocaleString() || 0}
+                </p>
+              </div>
+              <Gift className="w-8 h-8 text-orange-600" />
             </div>
           </div>
         </div>
@@ -268,6 +284,7 @@ export default function WalletTransactions() {
                   <option value="ORDER_PAYMENT">Payments</option>
                   <option value="ORDER_REFUND">Refunds</option>
                   <option value="ADMIN_ADJUSTMENT">Adjustments</option>
+                  <option value="REFERRAL_REWARD">Referral Rewards 🎁</option>
                 </select>
               </div>
 
@@ -291,7 +308,8 @@ export default function WalletTransactions() {
                     const isCredit =
                       tx.type === "ADD_MONEY" ||
                       tx.type === "ORDER_REFUND" ||
-                      tx.type === "ADMIN_ADJUSTMENT";
+                      tx.type === "ADMIN_ADJUSTMENT" ||
+                      tx.type === "REFERRAL_REWARD"; // ✅ Added
 
                     return (
                       <div
