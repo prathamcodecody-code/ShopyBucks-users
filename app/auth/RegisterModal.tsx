@@ -261,9 +261,7 @@ export default function RegisterModal({
                           return () => clearTimeout(timer);
                         }}
                       />
-                      <p className="text-xs text-red-500 mt-1">
-    Debug: "{form.referralCode}" (length: {form.referralCode.length})
-  </p>
+                
                       {/* Validation Icons */}
                       {form.referralCode && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
