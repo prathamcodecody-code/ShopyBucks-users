@@ -31,7 +31,7 @@ export default function RootLayout({
         `}
       </Script>
 
-      <body className="bg-white">
+      <body className="bg-white flex flex-col min-h-screen">
         <AuthProvider>
           <WishlistProvider>
             <CheckoutProvider>
@@ -42,7 +42,7 @@ export default function RootLayout({
                   <Navbar />
                 </header>
 
-                <main className="relative z-0 min-h-[calc(100vh-160px)]">
+                <main className="relative z-0 flex-grow">
                   {children}
                 </main>
 
