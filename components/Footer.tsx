@@ -9,16 +9,15 @@ export default function Footer() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [footerData, setFooterData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function fetchFooterData() {
       try {
         setLoading(true);
-        // 1. Fetch All Categories
         const catRes = await api.get("/categories");
         const categories = Array.isArray(catRes.data) ? catRes.data : [];
 
-        // 2. For each category, fetch its Types and Subtypes
         const fullData = await Promise.all(
           categories.map(async (cat: any) => {
             const typeRes = await api.get(`/product-types`, {
@@ -53,9 +52,21 @@ export default function Footer() {
     fetchFooterData();
   }, []);
 
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <>
-      <footer className="bg-genz-bg border-t border-genz-border mt-24">
+      <footer className="bg-genz-bg border-t border-genz-border">
         <div className="max-w-7xl mx-auto px-6 py-16">
           {/* ================= TOP GRID ================= */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10 mb-14">
@@ -128,40 +139,55 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* ================= DYNAMIC COLLECTIONS SECTION (Replaces Popular Searches) ================= */}
+          {/* ================= COLLECTIONS SECTION - EXPANDABLE ================= */}
           <div className="space-y-10 border-t border-genz-border pt-10">
             {!loading && footerData.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
                 {footerData.map((category) => (
-                  <div key={category.id} className="space-y-4">
-                    <h4 className="font-black text-genz-ink text-[13px] uppercase tracking-wider border-b border-genz-border pb-2">
-                      {category.name}
-                    </h4>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2">
-                      {category.types.map((type: any) => (
-                        <div key={type.id} className="group">
-                          <Link 
-                            href={`/all-products?categoryId=${category.id}&typeId=${type.id}`}
-                            className="text-xs font-bold text-genz-ink hover:text-genz-accent"
-                          >
-                            {type.name}:
-                          </Link>
-                          <span className="text-[11px] text-genz-muted ml-1 leading-relaxed">
-                            {type.subtypes.map((sub: any, idx: number) => (
-                              <React.Fragment key={sub.id}>
-                                <Link 
-                                  href={`/all-products?categoryId=${category.id}&typeId=${type.id}&subtypeId=${sub.id}`}
-                                  className="hover:underline"
-                                >
-                                  {sub.name}
-                                </Link>
-                                {idx < type.subtypes.length - 1 && " • "}
-                              </React.Fragment>
-                            ))}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                  <div key={category.id} className="space-y-2">
+                    <button
+                      onClick={() => toggleCategory(category.id)}
+                      className="flex items-center justify-between w-full group"
+                    >
+                      <h4 className="font-black text-genz-ink text-[13px] uppercase tracking-wider hover:text-genz-accent transition-colors">
+                        {category.name}
+                      </h4>
+                      <span className="text-genz-muted text-lg transition-transform duration-300 group-hover:text-genz-accent"
+                        style={{
+                          transform: expandedCategories.has(category.id) ? "rotate(180deg)" : "rotate(0deg)"
+                        }}
+                      >
+                        ▼
+                      </span>
+                    </button>
+
+                    {/* EXPANDABLE TYPES & SUBTYPES */}
+                    {expandedCategories.has(category.id) && (
+                      <div className="pt-3 space-y-3 max-h-96 overflow-y-auto">
+                        {category.types.map((type: any) => (
+                          <div key={type.id} className="space-y-1.5 pl-2 border-l-2 border-genz-border">
+                            <Link 
+                              href={`/all-products?categoryId=${category.id}&typeId=${type.id}`}
+                              className="text-xs font-bold text-genz-ink hover:text-genz-accent transition-colors block"
+                            >
+                              {type.name}
+                            </Link>
+                            <div className="text-[11px] text-genz-muted space-y-1">
+                              {type.subtypes.map((sub: any) => (
+                                <div key={sub.id}>
+                                  <Link 
+                                    href={`/all-products?categoryId=${category.id}&typeId=${type.id}&subtypeId=${sub.id}`}
+                                    className="hover:text-genz-accent transition-colors"
+                                  >
+                                    • {sub.name}
+                                  </Link>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
